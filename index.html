@@ -1,0 +1,1980 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JMA-timetable-V2.0</title>
+  <style>
+:root {
+  color-scheme: light;
+  --ink: #161616;
+  --muted: #6f6f6f;
+  --faint: #a8a8a8;
+  --line: #e0e0e0;
+  --grid: #e6e6e6;
+  --hour-line: #b5b5b5;
+  --page: #f4f4f4;
+  --panel: #fff;
+  --field: #f4f4f4;
+  --hover: #ececec;
+  --pressed: #e0e0e0;
+  --accent: #161616;
+  --on-accent: #fff;
+  --accent-soft: #f0f0f0;
+  --head-bg: #262626;
+  --head-ink: #fff;
+  --head-sep: #4a4a4a;
+  --sub-bg: #f7f7f7;
+  --slot-height: 28px;
+  --print-slot-height: 3.4mm;
+  --print-font-size: 6.3pt;
+}
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; }
+body {
+  margin: 0;
+  min-width: 960px;
+  color: var(--ink);
+  background: var(--page);
+  font-family: "Segoe UI Variable Display", "Segoe UI Variable", "Segoe UI", Aptos, Arial, sans-serif;
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+}
+
+button, input, select, textarea { font: inherit; }
+button { cursor: pointer; }
+h1, h2, p { margin-top: 0; }
+
+.app { display: flex; flex-direction: column; min-height: 100vh; }
+
+.brand, .preview-heading, .drawer-heading,
+.dialog-heading, .dialog-heading-actions, .format-box, .event-actions {
+  display: flex;
+  align-items: center;
+}
+
+/* ---------- Header: brand + commands on one row ---------- */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  height: 76px;
+  padding: 0 32px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+.titlebar { display: flex; align-items: center; flex: none; }
+.brand { gap: 14px; }
+.brand-mark {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 2px;
+  color: var(--on-accent);
+  background: var(--accent);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: -.02em;
+}
+h1 { margin: 0; font-size: 21px; font-weight: 700; letter-spacing: -.02em; }
+.titlebar-file { color: var(--muted); font-size: 14px; }
+.titlebar-file::before { content: "/"; margin-right: 12px; color: var(--faint); }
+
+.ribbon { display: flex; flex: 1; align-items: center; gap: 4px; min-width: 0; }
+.ribbon-group { display: flex; align-items: center; gap: 4px; }
+.ribbon-group + .ribbon-group::before {
+  width: 1px;
+  height: 24px;
+  margin: 0 12px;
+  background: var(--line);
+  content: "";
+}
+.ribbon-spacer { flex: 1; }
+.ribbon-spacer + .ribbon-group::before { display: none; }
+.ribbon-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  height: 42px;
+  border: 0;
+  border-radius: 2px;
+  padding: 0 14px;
+  color: var(--ink);
+  background: transparent;
+  font-size: 15px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background-color .12s, color .12s;
+}
+.ribbon-btn:hover:not(:disabled) { background: var(--hover); }
+.ribbon-btn:active:not(:disabled) { background: var(--pressed); }
+.ribbon-btn:disabled { cursor: default; opacity: .35; }
+.ribbon-btn[aria-expanded="true"] { background: var(--pressed); }
+.ribbon-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ribbon-icon {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.theme-icon { display: inline-flex; }
+.theme-icon .sun { display: none; }
+[data-theme="dark"] .theme-icon .sun { display: block; }
+[data-theme="dark"] .theme-icon .moon { display: none; }
+.ribbon-btn.primary-action {
+  margin-left: 8px;
+  padding: 0 20px;
+  color: var(--on-accent);
+  background: var(--accent);
+  font-weight: 600;
+}
+.ribbon-btn.primary-action:hover:not(:disabled) { background: var(--accent); opacity: .85; }
+
+/* ---------- Buttons (dialog) ---------- */
+.button {
+  height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 0 22px;
+  color: var(--ink);
+  background: var(--panel);
+  font-size: 15px;
+  font-weight: 500;
+  transition: background-color .12s, border-color .12s, opacity .12s;
+}
+.button:hover:not(:disabled) { border-color: var(--faint); background: var(--hover); }
+.button.primary { border-color: var(--accent); color: var(--on-accent); background: var(--accent); font-weight: 600; }
+.button.primary:hover:not(:disabled) { border-color: var(--accent); background: var(--accent); opacity: .85; }
+.button.danger { border-color: transparent; color: var(--muted); background: transparent; text-decoration: underline; text-underline-offset: 4px; }
+.button.danger:hover:not(:disabled) { color: var(--ink); background: var(--hover); }
+.button:disabled { cursor: default; opacity: .35; }
+
+/* ---------- Workspace ---------- */
+.workspace {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 0 minmax(0, 1fr);
+  gap: 0;
+  align-items: start;
+  padding: 32px;
+  transition: grid-template-columns .32s cubic-bezier(.2, .8, .2, 1), gap .32s;
+}
+.workspace.settings-open { grid-template-columns: 340px minmax(0, 1fr); gap: 28px; }
+
+.panel { border: 0; border-radius: 2px; background: var(--panel); }
+
+.settings-drawer {
+  position: sticky;
+  top: 108px;
+  min-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateX(-24px);
+  pointer-events: none;
+  transition: opacity .22s, transform .32s cubic-bezier(.2, .8, .2, 1);
+}
+.settings-open .settings-drawer { opacity: 1; transform: translateX(0); pointer-events: auto; }
+.drawer-inner { width: 340px; padding: 30px 30px 32px; }
+.drawer-heading, .preview-heading, .dialog-heading { justify-content: space-between; gap: 20px; }
+.drawer-heading h2, .dialog-heading h2 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -.02em; }
+.step {
+  margin: 0 0 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .12em;
+}
+
+.icon-button {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 0;
+  border-radius: 2px;
+  color: var(--muted);
+  background: transparent;
+  font-size: 24px;
+  line-height: 1;
+}
+.icon-button:hover { color: var(--ink); background: var(--hover); }
+
+.project-settings, .event-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px 16px;
+  margin-top: 28px;
+}
+.span-2 { grid-column: span 2; }
+.field { display: flex; flex-direction: column; gap: 8px; }
+.field > span, .format-box label span, .format-label, .day-setting legend {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+.field input, .field select, .field textarea, .format-box select {
+  width: 100%;
+  border: 1px solid transparent;
+  border-bottom-color: var(--line);
+  border-radius: 2px;
+  color: var(--ink);
+  background: var(--field);
+  font-size: 15px;
+  transition: border-color .12s, background-color .12s;
+}
+.field input:hover, .field select:hover, .field textarea:hover { background: var(--hover); }
+.field input:focus, .field select:focus, .field textarea:focus, .format-box select:focus {
+  border-color: transparent;
+  border-bottom: 2px solid var(--accent);
+  outline: 0;
+  background: var(--panel);
+}
+.field input, .field select { height: 44px; padding: 0 14px; }
+.field textarea { resize: vertical; min-height: 110px; padding: 12px 14px; line-height: 1.5; }
+.field output {
+  display: flex;
+  align-items: center;
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 2px;
+  color: var(--ink);
+  background: var(--accent-soft);
+  font-size: 17px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.day-setting { min-width: 0; margin: 0; border: 0; padding: 0; }
+.day-setting legend { margin-bottom: 8px; padding: 0; }
+.day-picker {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px;
+  padding: 3px;
+  border-radius: 2px;
+  background: var(--field);
+}
+.day-picker button {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 5px;
+  height: 42px;
+  border: 0;
+  border-radius: 2px;
+  color: var(--muted);
+  background: transparent;
+  transition: background-color .12s, color .12s;
+}
+.day-picker button:hover { color: var(--ink); background: var(--hover); }
+.day-picker button.active { color: var(--on-accent); background: var(--accent); }
+.day-picker strong { font-size: 18px; }
+.day-picker span { font-size: 12px; }
+
+.drawer-help {
+  margin-top: 28px;
+  border-left: 3px solid var(--accent);
+  padding: 4px 0 4px 16px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+.drawer-help strong { color: var(--ink); }
+.drawer-help p { margin: 4px 0 0; }
+
+/* ---------- Sheet ---------- */
+.preview { min-width: 0; padding: 0; }
+.preview-heading { align-items: flex-end; margin: 0; padding: 34px 36px 26px; }
+.preview-heading .step { display: block; }
+.preview-heading h2 { margin: 0; font-size: 30px; font-weight: 700; letter-spacing: -.025em; }
+.preview-heading > p { margin: 0 0 4px; color: var(--muted); font-size: 15px; }
+.print-title { display: none; }
+.print-area { padding: 0 36px 36px; }
+.table-wrap { overflow: auto; border: 1px solid var(--line); }
+table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+th, td { border: 1px solid var(--grid); }
+thead th {
+  height: 48px;
+  color: #fff;
+  font-family: "Arial Narrow", Arial, sans-serif;
+  font-size: 14px;
+  letter-spacing: .02em;
+  text-align: center;
+}
+.time-column { width: var(--time-column-width, 86px); }
+.activity-column { width: var(--activity-column-width, auto); }
+thead .time-heading {
+  width: 1%;
+  padding-right: 8px;
+  padding-left: 8px;
+  white-space: nowrap;
+}
+thead .activity-heading { width: auto; }
+tbody td {
+  height: var(--slot-height);
+  min-height: var(--slot-height);
+  padding: 3px 8px;
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 1.25;
+  vertical-align: middle;
+}
+.empty-time, .empty-activity { color: var(--faint); background: var(--panel); }
+.empty-time {
+  width: 1%;
+  padding-right: 10px;
+  padding-left: 6px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+.empty-activity { width: auto; cursor: pointer; transition: background-color .1s; }
+.empty-activity:hover { background: var(--hover); box-shadow: inset 3px 0 0 var(--accent); }
+.event-time, .event-activity {
+  cursor: grab;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  transition: opacity .15s, box-shadow .15s;
+}
+.event-time:active, .event-activity:active { cursor: grabbing; }
+.event-time.dragging, .event-activity.dragging { opacity: .38; }
+.event-time {
+  width: 1%;
+  padding-right: 6px;
+  padding-left: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+}
+.event-activity { text-align: center; }
+.event-time.train-pattern,
+.event-activity.train-pattern {
+  background-color: #fff !important;
+  background-image: repeating-linear-gradient(
+    135deg,
+    #ccc 0,
+    #ccc 1px,
+    transparent 1px,
+    transparent 6px
+  ) !important;
+  background-size: 8px 8px !important;
+  color: #18202f !important;
+}
+.event-time.selected, .event-activity.selected { box-shadow: inset 0 0 0 2px var(--accent); }
+.drop-target { box-shadow: inset 0 0 0 2px var(--accent) !important; background-color: var(--pressed) !important; }
+.drop-target-invalid {
+  box-shadow: inset 0 0 0 2px var(--faint) !important;
+  background-color: var(--page) !important;
+  background-image: repeating-linear-gradient(45deg, transparent 0 5px, var(--line) 5px 6px) !important;
+  cursor: not-allowed;
+}
+tbody tr:nth-child(4n + 1) td { border-top-color: var(--hour-line); }
+.empty-message { display: none; margin: 0 0 20px; color: var(--muted); font-size: 14px; text-align: center; }
+.empty-message.visible { display: block; }
+.status { min-height: 20px; margin: 0; padding: 0 32px 16px; color: var(--muted); font-size: 14px; }
+
+/* Screen-only header colors (print keeps its own) */
+@media screen {
+  thead tr:first-child th {
+    border-color: var(--head-bg);
+    border-right-color: var(--head-sep);
+    color: var(--head-ink);
+    background: var(--head-bg);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: .04em;
+  }
+  thead .subhead th {
+    height: 30px;
+    border-color: var(--grid);
+    color: var(--muted);
+    background: var(--sub-bg);
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+  }
+}
+
+/* ---------- Dialog ---------- */
+.event-dialog {
+  width: min(660px, calc(100vw - 40px));
+  max-height: calc(100vh - 40px);
+  border: 0;
+  border-radius: 2px;
+  padding: 0;
+  color: var(--ink);
+  background: var(--panel);
+}
+.event-dialog::backdrop { background: rgba(0, 0, 0, .45); }
+.event-dialog[open] { animation: dialog-in .16s ease-out; }
+@keyframes dialog-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.dialog-shell { padding: 28px 34px 28px; }
+.event-dialog .event-fields { gap: 16px 16px; margin-top: 22px; }
+.event-dialog .field textarea { min-height: 84px; }
+.dialog-heading-actions { gap: 10px; }
+.badge {
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 4px 10px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .04em;
+}
+.duration-control { display: grid; grid-template-columns: 44px 1fr 44px; gap: 3px; }
+.duration-control input { text-align: center; font-weight: 600; -moz-appearance: textfield; }
+.duration-control input::-webkit-inner-spin-button { appearance: none; }
+.duration-control button {
+  border: 0;
+  border-radius: 2px;
+  color: var(--ink);
+  background: var(--field);
+  font-size: 20px;
+}
+.duration-control button:hover { background: var(--pressed); }
+.format-box {
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 22px;
+  border-radius: 2px;
+  padding: 14px 16px 16px;
+  background: var(--field);
+}
+.format-label { width: 100%; margin-bottom: 4px; }
+.format-box label { display: flex; align-items: center; gap: 8px; margin-right: 10px; }
+.format-box input[type="color"] {
+  width: 36px;
+  height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 2px;
+  background: var(--panel);
+}
+.format-button, .color-preset {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 2px;
+  color: var(--ink);
+  background: transparent;
+  font-size: 16px;
+}
+.format-button:hover, .color-preset:hover { background: var(--pressed); }
+.format-button.active { color: var(--on-accent); background: var(--accent); }
+.color-preset::after {
+  display: block;
+  width: 18px;
+  height: 18px;
+  margin: auto;
+  border-radius: 2px;
+  content: "";
+}
+.color-preset.electric-blue::after { background: #0066ff; }
+.format-box select { width: auto; height: 36px; margin-left: auto; padding: 0 10px; background: var(--panel); }
+.event-actions { gap: 10px; margin-top: 24px; }
+.action-spacer { flex: 1; }
+
+@media (max-width: 1320px) {
+  .ribbon-btn:not(.primary-action) > span:not(.theme-icon) { display: none; }
+  .ribbon-btn { padding: 0 11px; }
+}
+
+/* ---------- Dark theme (screen only; print/PDF stays light) ---------- */
+@media screen {
+  html[data-theme="dark"] {
+    color-scheme: dark;
+    --ink: #ededed;
+    --muted: #9a9a9a;
+    --faint: #5e5e5e;
+    --line: #333;
+    --grid: #2e2e2e;
+    --hour-line: #555;
+    --page: #111;
+    --panel: #1b1b1b;
+    --field: #262626;
+    --hover: #2c2c2c;
+    --pressed: #363636;
+    --accent: #ededed;
+    --on-accent: #111;
+    --accent-soft: #262626;
+    --head-bg: #2e2e2e;
+    --head-ink: #ededed;
+    --head-sep: #444;
+    --sub-bg: #222;
+  }
+  [data-theme="dark"] .event-dialog::backdrop { background: rgba(0, 0, 0, .65); }
+}
+
+/* ---------- Modulow screen identity ---------- */
+@media screen {
+  :root {
+    --mod-blue: #0c4da2;
+    --mod-yellow: #fde021;
+    --mod-ink: #1e1e1e;
+    --mod-pale: #f5f5f5;
+    --mod-border: #c8c8c8;
+    --ink: var(--mod-ink);
+    --muted: #52677a;
+    --faint: #8a9bad;
+    --line: var(--mod-border);
+    --grid: #d7dde2;
+    --hour-line: #8798a7;
+    --page: var(--mod-pale);
+    --panel: #fff;
+    --field: #fff;
+    --hover: #f5faff;
+    --pressed: #e8f1fb;
+    --accent: var(--mod-blue);
+    --on-accent: #fff;
+    --accent-soft: #eaf3ff;
+    --head-bg: var(--mod-blue);
+    --head-ink: #fff;
+    --head-sep: rgba(255,255,255,.25);
+    --sub-bg: #eaf3ff;
+  }
+
+  body {
+    min-width: 960px;
+    background: var(--page);
+    font-family: "Myriad Pro", Arial, sans-serif;
+  }
+
+  .topbar {
+    position: relative;
+    display: flex;
+    height: 116px;
+    padding: 0 clamp(32px, 6vw, 80px);
+    border: 0;
+    background:
+      linear-gradient(var(--mod-yellow), var(--mod-yellow)) right 6vw center / 10vw 7px no-repeat,
+      linear-gradient(90deg, #fff 0 82%, var(--mod-blue) 82% 100%);
+  }
+  .titlebar { width: 82%; height: 100%; align-items: center; }
+  .brand { position: relative; display: grid; grid-template-columns: auto 1fr; column-gap: 22px; width: min(920px, 94%); padding-left: 30px; }
+  .brand-mark {
+    position: absolute;
+    top: 20px;
+    left: 0;
+    display: block;
+    width: 20px;
+    height: 3px;
+    border-radius: 0;
+    background: var(--mod-blue);
+  }
+  .brand h1 {
+    color: var(--mod-ink);
+    font-size: 34px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -.04em;
+    text-transform: uppercase;
+  }
+  .brand h1::before {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--mod-blue);
+    font-size: 12px;
+    line-height: 1.2;
+    letter-spacing: .1em;
+    content: "PLAN WITH CLARITY";
+  }
+  .titlebar-file {
+    display: flex;
+    align-items: end;
+    margin: 0 0 2px;
+    color: var(--mod-ink);
+    font-size: 15px;
+    line-height: 1.4;
+  }
+  .titlebar-file::before { content: none; }
+
+  .ribbon {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    min-height: 66px;
+    padding: 0 clamp(24px, 5vw, 72px);
+    border-bottom: 1px solid var(--mod-border);
+    background: rgba(255,255,255,.97);
+  }
+  .ribbon-group { height: 66px; }
+  .ribbon-group + .ribbon-group::before { display: none; }
+  .ribbon-btn {
+    position: relative;
+    height: 66px;
+    border: 0;
+    border-radius: 0;
+    padding: 0 18px;
+    color: var(--mod-ink);
+    background: transparent;
+    font-size: 15px;
+    font-weight: 800;
+  }
+  .ribbon-btn:hover:not(:disabled) { color: var(--mod-blue); background: transparent; }
+  .ribbon-btn::after {
+    position: absolute;
+    right: 14px;
+    bottom: 0;
+    left: 14px;
+    height: 4px;
+    background: transparent;
+    content: "";
+  }
+  .ribbon-btn:hover:not(:disabled)::after,
+  .ribbon-btn[aria-expanded="true"]::after { background: var(--mod-blue); }
+  .ribbon-btn[aria-expanded="true"] { color: var(--mod-blue); background: transparent; }
+  .ribbon-btn.primary-action {
+    height: 48px;
+    margin-left: 14px;
+    padding: 0 20px;
+    color: #fff;
+    background: var(--mod-blue);
+  }
+  .ribbon-btn.primary-action::after { display: none; }
+  .ribbon-btn.primary-action:hover:not(:disabled) { color: #fff; background: var(--mod-blue); opacity: 1; }
+
+  .workspace {
+    padding: clamp(36px, 5vw, 72px);
+    background: var(--mod-pale);
+  }
+  .workspace.settings-open { grid-template-columns: 340px minmax(0, 1fr); gap: 28px; }
+  .panel { border-radius: 0; }
+  .settings-drawer {
+    top: 102px;
+    border-top: 8px solid var(--mod-yellow);
+    background: #fff;
+  }
+  .preview {
+    border-top: 7px solid var(--mod-blue);
+    background: #fff;
+  }
+  .drawer-inner { padding: 30px; }
+  .step {
+    color: var(--mod-blue);
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: .12em;
+  }
+  .drawer-heading h2,
+  .dialog-heading h2,
+  .preview-heading h2 {
+    color: var(--mod-ink);
+    font-weight: 800;
+    letter-spacing: -.04em;
+    text-transform: uppercase;
+  }
+  .preview-heading { padding: 32px 32px 24px; }
+  .preview-heading h2 { font-size: clamp(34px, 4vw, 48px); }
+  .preview-heading > p { color: #52677a; }
+  .print-area { padding: 0 32px 32px; }
+  .table-wrap { border-color: var(--mod-border); }
+
+  .field > span,
+  .format-box label span,
+  .format-label,
+  .day-setting legend {
+    color: var(--mod-ink);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+  }
+  .field input,
+  .field select,
+  .field textarea,
+  .format-box select {
+    border: 1px solid #9eb7cc;
+    border-radius: 0;
+    background: #fff;
+  }
+  .field input:focus,
+  .field select:focus,
+  .field textarea:focus,
+  .format-box select:focus {
+    border: 1px solid var(--mod-blue);
+    box-shadow: 0 0 0 3px #d7e8fa;
+  }
+  .field output { border-radius: 0; background: var(--accent-soft); }
+  .day-picker { gap: 0; padding: 0; border: 1px solid #9eb7cc; border-radius: 0; background: #fff; }
+  .day-picker button { border-radius: 0; }
+  .day-picker button + button { border-left: 1px solid #9eb7cc; }
+  .day-picker button.active { color: #fff; background: var(--mod-blue); }
+  .drawer-help { border-left: 5px solid var(--mod-yellow); color: #52677a; }
+
+  thead tr:first-child th { background: var(--mod-blue); }
+  thead .subhead th { color: #234d75; background: #eaf3ff; }
+  .empty-activity:hover { background: #f5faff; box-shadow: inset 4px 0 var(--mod-blue); }
+  .event-time.selected, .event-activity.selected { box-shadow: inset 0 0 0 3px var(--mod-blue); }
+  .status { padding: 0 clamp(36px, 5vw, 72px) 24px; }
+
+  .button {
+    border: 1px solid var(--mod-border);
+    border-radius: 0;
+    background: #fff;
+    font-weight: 800;
+  }
+  .button.primary { border-color: var(--mod-blue); color: #fff; background: var(--mod-blue); }
+  .icon-button, .badge, .duration-control button, .format-box,
+  .format-button, .color-preset, .format-box input[type="color"] { border-radius: 0; }
+  .event-dialog {
+    border-radius: 0;
+    border-top: 8px solid var(--mod-yellow);
+    background: #fff;
+  }
+  .event-dialog::backdrop { background: rgba(12, 34, 60, .62); }
+  .badge { color: var(--mod-blue); border-color: var(--mod-blue); text-transform: uppercase; }
+  .duration-control button { color: var(--mod-ink); background: #eaf3ff; }
+  .format-box { background: #f3f6f8; }
+
+  html[data-theme="dark"] {
+    --ink: #f7f7f7;
+    --muted: #b8c7d7;
+    --faint: #73879a;
+    --line: #3c5268;
+    --grid: #32475b;
+    --hour-line: #60758a;
+    --page: #101923;
+    --panel: #172535;
+    --field: #1d3043;
+    --hover: #203d5b;
+    --pressed: #294b6e;
+    --accent: #65e2ff;
+    --on-accent: #102030;
+    --accent-soft: #203d5b;
+    --head-bg: #0c4da2;
+    --sub-bg: #203d5b;
+  }
+  [data-theme="dark"] body,
+  [data-theme="dark"] .workspace { background: #101923; }
+  [data-theme="dark"] .topbar {
+    background:
+      linear-gradient(var(--mod-yellow), var(--mod-yellow)) right 6vw center / 10vw 7px no-repeat,
+      linear-gradient(90deg, #172535 0 82%, var(--mod-blue) 82% 100%);
+  }
+  [data-theme="dark"] .brand h1,
+  [data-theme="dark"] .titlebar-file,
+  [data-theme="dark"] .ribbon-btn,
+  [data-theme="dark"] .drawer-heading h2,
+  [data-theme="dark"] .dialog-heading h2,
+  [data-theme="dark"] .preview-heading h2,
+  [data-theme="dark"] .field > span,
+  [data-theme="dark"] .format-box label span,
+  [data-theme="dark"] .format-label,
+  [data-theme="dark"] .day-setting legend { color: #f7f7f7; }
+  [data-theme="dark"] .ribbon { border-color: #32475b; background: rgba(23,37,53,.98); }
+  [data-theme="dark"] .preview,
+  [data-theme="dark"] .settings-drawer,
+  [data-theme="dark"] .event-dialog { background: #172535; }
+  [data-theme="dark"] .field input,
+  [data-theme="dark"] .field select,
+  [data-theme="dark"] .field textarea,
+  [data-theme="dark"] .format-box select,
+  [data-theme="dark"] .day-picker,
+  [data-theme="dark"] .button { color: #f7f7f7; border-color: #526a80; background: #1d3043; }
+  [data-theme="dark"] .format-box { background: #1d3043; }
+  [data-theme="dark"] .empty-time,
+  [data-theme="dark"] .empty-activity { background: #172535; }
+  [data-theme="dark"] .ribbon-btn.primary-action,
+  [data-theme="dark"] .button.primary { color: #fff; background: var(--mod-blue); }
+}
+
+@page { size: A4 landscape; margin: 7mm; }
+@media print {
+  /* Lock the original document formatting, independent of the screen UI theme */
+  .print-area { color: #1f2924; font-family: Inter, "Segoe UI", Arial, sans-serif; }
+  th, td { border: 1px solid #c8d2cc; }
+  tbody tr:nth-child(4n + 1) td { border-top: 2px solid #87928b; }
+  thead th { color: #fff; font-family: "Arial Narrow", Arial, sans-serif; font-weight: 700; letter-spacing: .02em; }
+  thead .subhead th { text-transform: uppercase; }
+  .empty-time, .empty-activity { color: #98a39d; background: #fff; }
+  .empty-time { font-weight: 600; }
+  tbody td { font-family: inherit; }
+  html, body {
+    width: 100%;
+    height: auto;
+    min-width: 0;
+    margin: 0;
+    background: #fff;
+  }
+  *, *::before, *::after {
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+  .app { width: 100%; margin: 0; padding: 0; }
+  .topbar, .settings-drawer, .preview-heading, .empty-message, .status, .event-dialog { display: none !important; }
+  .app { display: block; min-height: 0; }
+  .workspace, .workspace.settings-open { display: block; padding: 0; }
+  .print-area { padding: 0; }
+  .preview {
+    width: 100%;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    box-shadow: none;
+  }
+  .print-area {
+    width: 100%;
+    page-break-inside: avoid;
+    break-inside: avoid-page;
+  }
+  .print-title {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 10mm;
+    height: 9mm;
+    margin: 0 0 2mm;
+  }
+  .print-title h2 { margin: 0; font-family: "Arial Narrow", Arial, sans-serif; font-size: 14pt; }
+  .print-title p { margin: 0; color: #555; font-size: 7pt; white-space: nowrap; }
+  .table-wrap { width: 100%; overflow: visible; border-color: #8b9690; }
+  table {
+    width: 100% !important;
+    border-collapse: collapse;
+    table-layout: fixed;
+    page-break-inside: avoid;
+    break-inside: avoid-page;
+  }
+  .time-column { width: 16mm !important; }
+  .activity-column { width: auto !important; }
+  thead th {
+    height: 6mm;
+    padding: .4mm 1mm;
+    font-size: 7.5pt;
+    background: #607faa;
+  }
+  thead .subhead th {
+    height: 3.2mm;
+    padding: .2mm .6mm;
+    font-size: 5.2pt;
+    color: #34445c;
+    background: #e6ebf2;
+  }
+  tbody td {
+    height: var(--print-slot-height);
+    min-height: 0;
+    max-height: var(--print-slot-height);
+    padding: .2mm .7mm;
+    font-size: var(--print-font-size);
+    line-height: 1;
+    overflow: hidden;
+  }
+  .empty-time, .event-time {
+    width: 16mm !important;
+    padding-right: .7mm;
+    padding-left: .7mm;
+    font-size: 4.7pt;
+    letter-spacing: -.02em;
+    white-space: nowrap;
+  }
+  .event-time.train-pattern,
+  .event-activity.train-pattern {
+    background-color: #fff !important;
+    background-image: repeating-linear-gradient(
+      135deg,
+      #ccc 0,
+      #ccc .7pt,
+      transparent .7pt,
+      transparent 4pt
+    ) !important;
+    background-size: 5pt 5pt !important;
+    color: #18202f !important;
+  }
+  .event-time.selected, .event-activity.selected { box-shadow: none; }
+}
+
+</style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="titlebar">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <h1>JMA Timetable</h1>
+          <span class="titlebar-file">Build a clear schedule for every visit, meeting and journey.</span>
+        </div>
+      </div>
+    </header>
+    <nav class="ribbon project-actions" aria-label="Timetable actions">
+        <div class="ribbon-group">
+          <button id="undoBtn" class="ribbon-btn undo-button" type="button" disabled title="Undo the last change (up to 5 steps)">
+            <svg class="ribbon-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg><span>Undo</span>
+          </button>
+        </div>
+        <div class="ribbon-group">
+          <button id="newBtn" class="ribbon-btn" type="button">
+            <svg class="ribbon-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z"/><path d="M14 3v5h5"/><path d="M12 11v6M9 14h6"/></svg><span>New</span>
+          </button>
+          <button id="openBtn" class="ribbon-btn" type="button">
+            <svg class="ribbon-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/></svg><span>Open</span>
+          </button>
+          <button id="saveBtn" class="ribbon-btn" type="button">
+            <svg class="ribbon-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h11l4 4v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M8 3v5h7V3"/><path d="M8 21v-7h8v7"/></svg><span>Save</span>
+          </button>
+        </div>
+        <div class="ribbon-group">
+          <button id="settingsBtn" class="ribbon-btn settings-button" type="button" aria-expanded="false">
+            <svg class="ribbon-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg><span>Settings</span>
+          </button>
+        </div>
+        <span class="ribbon-spacer"></span>
+        <div class="ribbon-group">
+          <button id="themeBtn" class="ribbon-btn icon-only" type="button" aria-pressed="false" title="Switch between light and dark theme">
+            <span id="themeIcon" class="theme-icon" aria-hidden="true">
+              <svg class="ribbon-icon moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/></svg>
+              <svg class="ribbon-icon sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+            </span><span id="themeLabel">Dark mode</span>
+          </button>
+          <button id="pdfBtn" class="ribbon-btn primary-action" type="button">
+            <svg class="ribbon-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9V3h10v6"/><path d="M7 17H5a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-2"/><path d="M7 14h10v7H7z"/></svg><span>Preview / PDF</span>
+          </button>
+        </div>
+        <input id="fileInput" type="file" accept=".json,application/json" hidden>
+    </nav>
+    <section id="workspace" class="workspace">
+      <aside id="settingsDrawer" class="settings-drawer panel" aria-hidden="true">
+        <div class="drawer-inner">
+          <div class="drawer-heading">
+            <div>
+              <p class="step">SETTINGS</p>
+              <h2>Configuration</h2>
+            </div>
+            <button id="closeSettingsBtn" class="icon-button" type="button" aria-label="Close settings">×</button>
+          </div>
+
+          <div class="project-settings">
+            <label class="field span-2">
+              <span>Timetable title</span>
+              <input id="titleInput" type="text" value="JMA TIMETABLE" maxlength="80">
+            </label>
+            <fieldset class="field span-2 day-setting">
+              <legend>Number of days</legend>
+              <div class="day-picker" aria-label="Number of days">
+                <button type="button" data-days="1"><strong>1</strong><span>day</span></button>
+                <button type="button" data-days="2"><strong>2</strong><span>days</span></button>
+                <button type="button" data-days="3" class="active"><strong>3</strong><span>days</span></button>
+              </div>
+              <input id="dayCount" type="hidden" value="3">
+            </fieldset>
+            <label class="field span-2">
+              <span>First day</span>
+              <input id="startDate" type="date">
+            </label>
+            <label class="field">
+              <span>Start</span>
+              <input id="rangeStart" type="time" value="08:00" step="900">
+            </label>
+            <label class="field">
+              <span>End</span>
+              <input id="rangeEnd" type="time" value="18:00" step="900">
+            </label>
+          </div>
+
+          <div class="drawer-help">
+            <strong>Tip</strong>
+            <p>Choose 1 to 3 days and a time range using 15-minute increments.</p>
+          </div>
+        </div>
+      </aside>
+
+      <section class="preview panel">
+        <div class="preview-heading">
+          <div>
+            <p class="step">PRINT PREVIEW</p>
+            <h2 id="sheetTitle">JMA TIMETABLE</h2>
+          </div>
+          <p id="sheetRange"></p>
+        </div>
+
+        <div id="printArea" class="print-area">
+          <div class="print-title">
+            <h2 id="printTitle">JMA TIMETABLE</h2>
+            <p id="printRange"></p>
+          </div>
+          <div class="table-wrap">
+            <table id="timetable" aria-label="Planning">
+              <colgroup id="tableColumns"></colgroup>
+              <thead id="tableHead"></thead>
+              <tbody id="tableBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <p id="emptyMessage" class="empty-message">Click a timetable cell to add the first activity.</p>
+      </section>
+    </section>
+
+    <p id="status" class="status" role="status" aria-live="polite"></p>
+  </main>
+
+  <dialog id="eventDialog" class="event-dialog">
+    <form method="dialog" class="dialog-shell" novalidate>
+      <div class="dialog-heading">
+        <div>
+          <p class="step">ACTIVITY</p>
+          <h2 id="dialogTitle">Add an activity</h2>
+        </div>
+        <div class="dialog-heading-actions">
+          <span id="modeBadge" class="badge">New</span>
+          <button id="closeDialogBtn" class="icon-button" type="button" aria-label="Close">×</button>
+        </div>
+      </div>
+
+      <div class="event-fields">
+        <label class="field">
+          <span>Day</span>
+          <select id="eventDay"></select>
+        </label>
+        <label class="field">
+          <span>Start time</span>
+          <input id="eventStart" type="time" value="08:00" step="900">
+        </label>
+        <label class="field">
+          <span>Duration</span>
+          <div class="duration-control">
+            <button id="durationDown" type="button" aria-label="Reduce by 15 minutes">−</button>
+            <input id="duration" type="number" value="60" min="15" step="15">
+            <button id="durationUp" type="button" aria-label="Add 15 minutes">+</button>
+          </div>
+        </label>
+        <label class="field">
+          <span>Calculated end</span>
+          <output id="eventEnd">09:00</output>
+        </label>
+        <label class="field span-2">
+          <span>Activity type</span>
+          <select id="eventType">
+            <option value="normal">Activity</option>
+            <option value="train">Train — fine 20% grey hatching</option>
+            <option value="break">Break (15 minutes)</option>
+            <option value="lunch">Lunch</option>
+            <option value="grey">Grey zone</option>
+            <option value="walk">Optional walk</option>
+            <option value="visit">Optional visit</option>
+            <option value="welcome">Optional welcome</option>
+          </select>
+        </label>
+        <label class="field span-2">
+          <span>Activity text</span>
+          <textarea id="activityInput" rows="4" placeholder="E.g. Train Luxembourg – Paris"></textarea>
+        </label>
+      </div>
+
+      <div class="format-box">
+        <span class="format-label">Cell formatting</span>
+        <label title="Background color"><span>Fill</span><input id="backgroundColor" type="color" value="#ffffff"></label>
+        <label title="Text color"><span>Text</span><input id="textColor" type="color" value="#172033"></label>
+        <button id="electricBlueBtn" class="color-preset electric-blue" type="button" title="Electric blue text" aria-label="Apply electric blue"></button>
+        <button id="boldBtn" class="format-button" type="button" aria-pressed="false" title="Bold"><strong>B</strong></button>
+        <button id="italicBtn" class="format-button" type="button" aria-pressed="false" title="Italic"><em>I</em></button>
+        <select id="alignSelect" aria-label="Text alignment">
+          <option value="left">Left</option>
+          <option value="center" selected>Center</option>
+          <option value="right">Right</option>
+        </select>
+      </div>
+
+      <div class="event-actions">
+        <button id="deleteEventBtn" class="button danger" type="button" disabled>Delete</button>
+        <span class="action-spacer"></span>
+        <button id="clearEditorBtn" class="button secondary" type="button">Cancel</button>
+        <button id="insertBeforeBtn" class="button secondary" type="button">Insert before</button>
+        <button id="saveEventBtn" class="button primary" type="button">Add activity</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script>
+const STORAGE_KEY = "jma-timetable-generator-v2";
+const SLOT_MINUTES = 15;
+const MAX_HISTORY = 5;
+const history = [];
+let draggedEventId = null;
+let suppressClickUntil = 0;
+
+const TYPE_PRESETS = {
+  normal: { label: "Activity", title: "", duration: 60, background: "#ffffff", color: "#18202f", bold: false, pattern: "none" },
+  train: { label: "Train", title: "Train", duration: 120, background: "#ffffff", color: "#18202f", bold: false, pattern: "diagonal" },
+  break: { label: "Break", title: "Break", duration: 15, background: "#c0c0c0", color: "#18202f", bold: false, pattern: "none" },
+  lunch: { label: "Lunch", title: "Lunch", duration: 60, background: "#ffe699", color: "#18202f", bold: false, pattern: "none" },
+  grey: { label: "Grey zone", title: "", duration: 15, background: "#c0c0c0", color: "#18202f", bold: false, pattern: "none" },
+  walk: { label: "Optional walk", title: "Optional walk", duration: 60, background: "#e2f0d9", color: "#18202f", bold: false, pattern: "none" },
+  visit: { label: "Optional visit", title: "Optional visit", duration: 60, background: "#ddebf7", color: "#18202f", bold: true, pattern: "none" },
+  welcome: { label: "Optional welcome", title: "Welcome", duration: 30, background: "#fff2cc", color: "#18202f", bold: true, pattern: "none" }
+};
+
+const state = {
+  title: "JMA TIMETABLE",
+  dayCount: 3,
+  startDate: dateToInput(new Date()),
+  rangeStart: "08:00",
+  rangeEnd: "18:00",
+  events: [],
+  selectedId: null,
+  selectedSlot: { day: 0, minutes: 8 * 60 }
+};
+
+const el = Object.fromEntries(
+  [
+    "titleInput", "dayCount", "startDate", "rangeStart", "rangeEnd", "eventDay",
+    "eventStart", "duration", "eventEnd", "eventType", "activityInput",
+    "backgroundColor", "textColor", "alignSelect", "boldBtn", "italicBtn",
+    "saveEventBtn", "insertBeforeBtn", "deleteEventBtn", "modeBadge",
+    "sheetTitle", "sheetRange", "printTitle", "printRange", "tableColumns", "tableHead",
+    "tableBody", "timetable", "emptyMessage", "status", "fileInput",
+    "workspace", "settingsDrawer", "settingsBtn", "eventDialog", "dialogTitle", "undoBtn"
+  ].map((id) => [id, document.getElementById(id)])
+);
+
+function dateToInput(date) {
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
+}
+
+function addDays(isoDate, amount) {
+  const date = new Date(`${isoDate}T12:00:00`);
+  date.setDate(date.getDate() + amount);
+  return date;
+}
+
+function parseTime(value) {
+  const [hours, minutes] = value.split(":").map(Number);
+  return hours * 60 + minutes;
+}
+
+function formatTime(minutes) {
+  const normalized = Math.max(0, Math.min(24 * 60, minutes));
+  return `${String(Math.floor(normalized / 60)).padStart(2, "0")}:${String(normalized % 60).padStart(2, "0")}`;
+}
+
+function formatDay(date, long = false) {
+  return new Intl.DateTimeFormat("en-GB", {
+    weekday: "long",
+    day: "2-digit",
+    month: long ? "long" : "2-digit",
+    ...(long ? { year: "numeric" } : {})
+  }).format(date);
+}
+
+function makeId() {
+  return globalThis.crypto?.randomUUID?.() || `event-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function clampDuration(value) {
+  const numeric = Number(value) || SLOT_MINUTES;
+  return Math.max(SLOT_MINUTES, Math.round(numeric / SLOT_MINUTES) * SLOT_MINUTES);
+}
+
+function isQuarterHour(value) {
+  return Number.isFinite(value) && value % SLOT_MINUTES === 0;
+}
+
+function activeRange() {
+  return { start: parseTime(state.rangeStart), end: parseTime(state.rangeEnd) };
+}
+
+function rangeIsValid(start, end) {
+  return isQuarterHour(start) && isQuarterHour(end) && start >= 0 && end <= 24 * 60 && end > start;
+}
+
+function eventEnd(event) {
+  return event.start + event.duration;
+}
+
+function selectedEvent() {
+  return state.events.find((event) => event.id === state.selectedId) || null;
+}
+
+function eventsForDay(day) {
+  return state.events.filter((event) => event.day === day).sort((a, b) => a.start - b.start);
+}
+
+function overlaps(candidate, ignoredId = null) {
+  return state.events.some((event) => (
+    event.id !== ignoredId
+    && event.day === candidate.day
+    && candidate.start < eventEnd(event)
+    && event.start < eventEnd(candidate)
+  ));
+}
+
+function sanitizeEvent(raw) {
+  const type = TYPE_PRESETS[raw.type] ? raw.type : "normal";
+  const isTrain = type === "train";
+  return {
+    id: typeof raw.id === "string" ? raw.id : makeId(),
+    day: Math.max(0, Math.min(2, Number(raw.day) || 0)),
+    start: Math.max(0, Math.round((Number(raw.start) || 0) / SLOT_MINUTES) * SLOT_MINUTES),
+    duration: clampDuration(raw.duration),
+    title: String(raw.title || ""),
+    type,
+    style: {
+      background: isTrain ? "#ffffff" : (/^#[0-9a-f]{6}$/i.test(raw.style?.background) ? raw.style.background : TYPE_PRESETS[type].background),
+      color: isTrain ? "#18202f" : (/^#[0-9a-f]{6}$/i.test(raw.style?.color) ? raw.style.color : TYPE_PRESETS[type].color),
+      bold: isTrain ? false : Boolean(raw.style?.bold),
+      italic: Boolean(raw.style?.italic),
+      align: ["left", "center", "right"].includes(raw.style?.align) ? raw.style.align : "center",
+      pattern: raw.style?.pattern === "diagonal" || type === "train" ? "diagonal" : "none"
+    }
+  };
+}
+
+function loadState() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (!saved || !Array.isArray(saved.events)) return;
+    state.title = String(saved.title || state.title);
+    state.dayCount = Math.max(1, Math.min(3, Number(saved.dayCount) || 3));
+    state.startDate = /^\d{4}-\d{2}-\d{2}$/.test(saved.startDate) ? saved.startDate : state.startDate;
+    state.rangeStart = saved.rangeStart || state.rangeStart;
+    state.rangeEnd = saved.rangeEnd || state.rangeEnd;
+    state.events = saved.events.map(sanitizeEvent);
+  } catch {
+    localStorage.removeItem(STORAGE_KEY);
+  }
+}
+
+function persist() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    version: 2,
+    title: state.title,
+    dayCount: state.dayCount,
+    startDate: state.startDate,
+    rangeStart: state.rangeStart,
+    rangeEnd: state.rangeEnd,
+    events: state.events
+  }));
+}
+
+function snapshotState() {
+  return structuredClone({
+    title: state.title,
+    dayCount: state.dayCount,
+    startDate: state.startDate,
+    rangeStart: state.rangeStart,
+    rangeEnd: state.rangeEnd,
+    events: state.events
+  });
+}
+
+function pushHistory(snapshot = snapshotState()) {
+  history.push(snapshot);
+  if (history.length > MAX_HISTORY) history.shift();
+  updateUndoButton();
+}
+
+function updateUndoButton() {
+  el.undoBtn.disabled = history.length === 0;
+  el.undoBtn.title = history.length
+    ? `Undo the last change (${history.length}/${MAX_HISTORY})`
+    : "No changes to undo";
+}
+
+function undoLastChange() {
+  const previous = history.pop();
+  if (!previous) return;
+  Object.assign(state, structuredClone(previous), {
+    selectedId: null,
+    selectedSlot: { day: 0, minutes: parseTime(previous.rangeStart) }
+  });
+  closeEventDialog();
+  syncProjectInputs();
+  resetEditor(state.selectedSlot);
+  persist();
+  render();
+  updateUndoButton();
+  showStatus(`Change undone. ${history.length} undo step${history.length === 1 ? "" : "s"} available.`);
+}
+
+function showStatus(message, isError = false) {
+  el.status.textContent = message;
+  el.status.style.color = isError ? "var(--ink)" : ""; el.status.style.fontWeight = isError ? "600" : "";
+  clearTimeout(showStatus.timeout);
+  showStatus.timeout = setTimeout(() => {
+    el.status.textContent = "";
+    el.status.style.color = "";
+  }, 3200);
+}
+
+function updateDayOptions() {
+  const current = Math.min(Number(el.eventDay.value) || 0, state.dayCount - 1);
+  el.eventDay.replaceChildren();
+  for (let day = 0; day < state.dayCount; day += 1) {
+    const option = document.createElement("option");
+    option.value = String(day);
+    option.textContent = `Day ${day + 1} — ${formatDay(addDays(state.startDate, day))}`;
+    el.eventDay.append(option);
+  }
+  el.eventDay.value = String(current);
+}
+
+function syncProjectInputs() {
+  el.titleInput.value = state.title;
+  el.dayCount.value = String(state.dayCount);
+  document.querySelectorAll("[data-days]").forEach((button) => {
+    const active = Number(button.dataset.days) === state.dayCount;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+  el.startDate.value = state.startDate;
+  el.rangeStart.value = state.rangeStart;
+  el.rangeEnd.value = state.rangeEnd;
+  updateDayOptions();
+}
+
+function updateCalculatedEnd() {
+  const start = parseTime(el.eventStart.value || "00:00");
+  const duration = clampDuration(el.duration.value);
+  el.duration.value = String(duration);
+  el.eventEnd.value = formatTime(start + duration);
+}
+
+function setToggle(button, active) {
+  button.classList.toggle("active", active);
+  button.setAttribute("aria-pressed", String(active));
+}
+
+function resetEditor(slot = state.selectedSlot) {
+  state.selectedId = null;
+  state.selectedSlot = slot || { day: 0, minutes: parseTime(state.rangeStart) };
+  el.eventDay.value = String(Math.min(state.selectedSlot.day, state.dayCount - 1));
+  el.eventStart.value = formatTime(state.selectedSlot.minutes);
+  el.duration.value = "60";
+  el.eventType.value = "normal";
+  el.activityInput.value = "";
+  el.backgroundColor.value = TYPE_PRESETS.normal.background;
+  el.textColor.value = TYPE_PRESETS.normal.color;
+  el.alignSelect.value = "center";
+  setToggle(el.boldBtn, false);
+  setToggle(el.italicBtn, false);
+  el.saveEventBtn.textContent = "Add activity";
+  el.deleteEventBtn.disabled = true;
+  el.modeBadge.textContent = "New";
+  el.dialogTitle.textContent = "Add an activity";
+  updateCalculatedEnd();
+  renderSelection();
+}
+
+function loadEventIntoEditor(event) {
+  state.selectedId = event.id;
+  state.selectedSlot = { day: event.day, minutes: event.start };
+  el.eventDay.value = String(event.day);
+  el.eventStart.value = formatTime(event.start);
+  el.duration.value = String(event.duration);
+  el.eventType.value = event.type;
+  el.activityInput.value = event.title;
+  el.backgroundColor.value = event.style.background;
+  el.textColor.value = event.style.color;
+  el.alignSelect.value = event.style.align;
+  setToggle(el.boldBtn, event.style.bold);
+  setToggle(el.italicBtn, event.style.italic);
+  el.saveEventBtn.textContent = "Update";
+  el.deleteEventBtn.disabled = false;
+  el.modeBadge.textContent = "Editing";
+  el.dialogTitle.textContent = "Edit activity";
+  updateCalculatedEnd();
+  renderSelection();
+}
+
+function readEditorEvent(id = state.selectedId || makeId()) {
+  return sanitizeEvent({
+    id,
+    day: Number(el.eventDay.value),
+    start: parseTime(el.eventStart.value),
+    duration: clampDuration(el.duration.value),
+    title: el.activityInput.value.trim(),
+    type: el.eventType.value,
+    style: {
+      background: el.backgroundColor.value,
+      color: el.textColor.value,
+      bold: el.boldBtn.classList.contains("active"),
+      italic: el.italicBtn.classList.contains("active"),
+      align: el.alignSelect.value,
+      pattern: TYPE_PRESETS[el.eventType.value].pattern
+    }
+  });
+}
+
+function validateEvent(event, ignoredId = null) {
+  const { start, end } = activeRange();
+  if (!isQuarterHour(event.start) || !isQuarterHour(event.duration)) {
+    showStatus("The start time and duration must use 15-minute increments.", true);
+    return false;
+  }
+  if (event.start < start || eventEnd(event) > end) {
+    showStatus(`The activity must remain between ${state.rangeStart} and ${state.rangeEnd}.`, true);
+    return false;
+  }
+  if (event.type !== "grey" && !event.title) {
+    showStatus("Enter activity text.", true);
+    return false;
+  }
+  if (overlaps(event, ignoredId)) {
+    showStatus("This activity overlaps an existing activity.", true);
+    return false;
+  }
+  return true;
+}
+
+function saveEvent() {
+  const event = readEditorEvent();
+  if (!validateEvent(event, state.selectedId)) return;
+  const index = state.events.findIndex((item) => item.id === state.selectedId);
+  pushHistory();
+  if (index >= 0) state.events[index] = event;
+  else state.events.push(event);
+  state.selectedId = event.id;
+  persist();
+  render();
+  loadEventIntoEditor(event);
+  showStatus(index >= 0 ? "Activity updated." : "Activity added.");
+  closeEventDialog();
+}
+
+function insertBefore() {
+  const event = readEditorEvent(makeId());
+  const { end } = activeRange();
+  const previous = snapshotState();
+  const affected = eventsForDay(event.day).filter((item) => item.start >= event.start);
+  if (affected.some((item) => eventEnd(item) + event.duration > end)) {
+    showStatus("Cannot insert: shifted activities would exceed the timetable end.", true);
+    return;
+  }
+  affected.forEach((item) => {
+    item.start += event.duration;
+  });
+  if (!validateEvent(event)) {
+    affected.forEach((item) => {
+      item.start -= event.duration;
+    });
+    return;
+  }
+  pushHistory(previous);
+  state.events.push(event);
+  state.selectedId = event.id;
+  persist();
+  render();
+  loadEventIntoEditor(event);
+  showStatus("Activity inserted; later activities were shifted.");
+  closeEventDialog();
+}
+
+function deleteSelectedEvent() {
+  const event = selectedEvent();
+  if (!event) return;
+  pushHistory();
+  state.events = state.events.filter((item) => item.id !== event.id);
+  state.events.forEach((item) => {
+    if (item.day === event.day && item.start >= eventEnd(event)) item.start -= event.duration;
+  });
+  persist();
+  render();
+  resetEditor({ day: event.day, minutes: event.start });
+  showStatus("Activity deleted; later activities were moved up.");
+  closeEventDialog();
+}
+
+function openEventDialog() {
+  if (!el.eventDialog.open) el.eventDialog.showModal();
+  requestAnimationFrame(() => el.activityInput.focus());
+}
+
+function closeEventDialog() {
+  if (el.eventDialog.open) el.eventDialog.close();
+}
+
+function setSettingsOpen(open) {
+  el.workspace.classList.toggle("settings-open", open);
+  el.settingsDrawer.setAttribute("aria-hidden", String(!open));
+  el.settingsBtn.setAttribute("aria-expanded", String(open));
+}
+
+function applyPreset(type) {
+  const preset = TYPE_PRESETS[type];
+  if (!preset) return;
+  el.duration.value = String(preset.duration);
+  if (!el.activityInput.value.trim() || Object.values(TYPE_PRESETS).some((item) => item.title === el.activityInput.value.trim())) {
+    el.activityInput.value = preset.title;
+  }
+  el.backgroundColor.value = preset.background;
+  el.textColor.value = preset.color;
+  setToggle(el.boldBtn, preset.bold);
+  el.alignSelect.value = "center";
+  updateCalculatedEnd();
+}
+
+function renderHead() {
+  el.tableColumns.replaceChildren();
+  el.tableHead.replaceChildren();
+  const timeWidth = 86;
+  const activityWidth = `calc((100% - ${timeWidth * state.dayCount}px) / ${state.dayCount})`;
+  el.timetable.style.setProperty("--time-column-width", `${timeWidth}px`);
+  el.timetable.style.setProperty("--activity-column-width", activityWidth);
+  const dayRow = document.createElement("tr");
+  const subheadRow = document.createElement("tr");
+  subheadRow.className = "subhead";
+  for (let day = 0; day < state.dayCount; day += 1) {
+    const timeColumn = document.createElement("col");
+    timeColumn.className = "time-column";
+    timeColumn.style.width = `${timeWidth}px`;
+    const activityColumn = document.createElement("col");
+    activityColumn.className = "activity-column";
+    activityColumn.style.width = activityWidth;
+    el.tableColumns.append(timeColumn, activityColumn);
+
+    const dayHeading = document.createElement("th");
+    dayHeading.colSpan = 2;
+    dayHeading.textContent = `DAY ${day + 1} — ${formatDay(addDays(state.startDate, day))}`;
+    dayRow.append(dayHeading);
+
+    const timeHeading = document.createElement("th");
+    timeHeading.className = "time-heading";
+    timeHeading.textContent = "Time";
+    const activityHeading = document.createElement("th");
+    activityHeading.className = "activity-heading";
+    activityHeading.textContent = "Activity";
+    subheadRow.append(timeHeading, activityHeading);
+  }
+  el.tableHead.append(dayRow, subheadRow);
+}
+
+function appendEmptyCells(row, day, minutes) {
+  const timeCell = document.createElement("td");
+  timeCell.className = "empty-time";
+  timeCell.textContent = formatTime(minutes);
+  timeCell.dataset.day = String(day);
+  timeCell.dataset.minutes = String(minutes);
+
+  const activityCell = document.createElement("td");
+  activityCell.className = "empty-activity";
+  activityCell.dataset.day = String(day);
+  activityCell.dataset.minutes = String(minutes);
+  activityCell.title = `Add an activity at ${formatTime(minutes)}`;
+  row.append(timeCell, activityCell);
+}
+
+function appendEventCells(row, event) {
+  const slots = event.duration / SLOT_MINUTES;
+  const common = {
+    backgroundColor: event.style.background,
+    color: event.style.color,
+    fontWeight: event.style.bold ? "700" : "400",
+    fontStyle: event.style.italic ? "italic" : "normal",
+    textAlign: event.style.align
+  };
+
+  const timeCell = document.createElement("td");
+  timeCell.className = "event-time";
+  timeCell.rowSpan = slots;
+  timeCell.draggable = true;
+  timeCell.dataset.eventId = event.id;
+  timeCell.dataset.day = String(event.day);
+  timeCell.dataset.minutes = String(event.start);
+  timeCell.title = "Drag to move this activity";
+  timeCell.textContent = `${formatTime(event.start)} – ${formatTime(eventEnd(event))}`;
+  Object.assign(timeCell.style, common);
+
+  const activityCell = document.createElement("td");
+  activityCell.className = "event-activity";
+  activityCell.rowSpan = slots;
+  activityCell.draggable = true;
+  activityCell.dataset.eventId = event.id;
+  activityCell.dataset.day = String(event.day);
+  activityCell.dataset.minutes = String(event.start);
+  activityCell.title = "Drag to move this activity";
+  activityCell.textContent = event.title;
+  Object.assign(activityCell.style, common);
+  if (event.style.pattern === "diagonal" || event.type === "train") {
+    timeCell.classList.add("train-pattern");
+    activityCell.classList.add("train-pattern");
+  }
+
+  if (event.id === state.selectedId) {
+    timeCell.classList.add("selected");
+    activityCell.classList.add("selected");
+  }
+  row.append(timeCell, activityCell);
+}
+
+function renderBody() {
+  el.tableBody.replaceChildren();
+  const { start, end } = activeRange();
+  const dayEvents = Array.from({ length: state.dayCount }, (_, day) => eventsForDay(day));
+
+  for (let minutes = start; minutes < end; minutes += SLOT_MINUTES) {
+    const row = document.createElement("tr");
+    for (let day = 0; day < state.dayCount; day += 1) {
+      const covering = dayEvents[day].find((event) => event.start < minutes && eventEnd(event) > minutes);
+      if (covering) continue;
+      const event = dayEvents[day].find((item) => item.start === minutes);
+      if (event) appendEventCells(row, event);
+      else appendEmptyCells(row, day, minutes);
+    }
+    el.tableBody.append(row);
+  }
+  el.emptyMessage.classList.toggle("visible", state.events.length === 0);
+}
+
+function renderSelection() {
+  document.querySelectorAll("[data-event-id]").forEach((cell) => {
+    cell.classList.toggle("selected", cell.dataset.eventId === state.selectedId);
+  });
+}
+
+function clearDropTargets() {
+  document.querySelectorAll(".drop-target, .drop-target-invalid").forEach((cell) => {
+    cell.classList.remove("drop-target", "drop-target-invalid");
+  });
+}
+
+function dropPosition(cell) {
+  if (!cell?.dataset.day || !cell?.dataset.minutes) return null;
+  return {
+    day: Number(cell.dataset.day),
+    minutes: Number(cell.dataset.minutes)
+  };
+}
+
+function dropCandidate(position) {
+  const source = state.events.find((event) => event.id === draggedEventId);
+  if (!source || !position) return null;
+  return { ...source, day: position.day, start: position.minutes };
+}
+
+function canDropEvent(candidate) {
+  if (!candidate) return false;
+  const { start, end } = activeRange();
+  return candidate.start >= start
+    && eventEnd(candidate) <= end
+    && !overlaps(candidate, candidate.id);
+}
+
+function highlightDropTarget(cell) {
+  clearDropTargets();
+  const candidate = dropCandidate(dropPosition(cell));
+  cell.classList.add(canDropEvent(candidate) ? "drop-target" : "drop-target-invalid");
+}
+
+function moveDraggedEvent(cell) {
+  const source = state.events.find((event) => event.id === draggedEventId);
+  const position = dropPosition(cell);
+  const candidate = dropCandidate(position);
+  if (!source || !position || !canDropEvent(candidate)) {
+    showStatus("Cannot move: the time slot is occupied or exceeds the timetable.", true);
+    return;
+  }
+  if (source.day === position.day && source.start === position.minutes) return;
+  pushHistory();
+  source.day = position.day;
+  source.start = position.minutes;
+  state.selectedId = source.id;
+  state.selectedSlot = { day: source.day, minutes: source.start };
+  persist();
+  render();
+  showStatus(`Activity moved to day ${source.day + 1} at ${formatTime(source.start)}.`);
+}
+
+function updatePrintSizing() {
+  const { start, end } = activeRange();
+  const rows = Math.max(1, (end - start) / SLOT_MINUTES);
+  const rowHeight = Math.max(1.9, Math.min(3.95, 166 / rows));
+  const fontSize = Math.max(4.1, Math.min(6.2, rowHeight * 1.52));
+  document.documentElement.style.setProperty("--print-slot-height", `${rowHeight}mm`);
+  document.documentElement.style.setProperty("--print-font-size", `${fontSize}pt`);
+}
+
+function render() {
+  const first = addDays(state.startDate, 0);
+  const last = addDays(state.startDate, state.dayCount - 1);
+  const rangeText = state.dayCount === 1
+    ? formatDay(first, true)
+    : `${formatDay(first)} — ${formatDay(last, true)}`;
+  el.sheetTitle.textContent = state.title || "JMA TIMETABLE";
+  el.printTitle.textContent = state.title || "JMA TIMETABLE";
+  el.sheetRange.textContent = rangeText;
+  el.printRange.textContent = rangeText;
+  renderHead();
+  renderBody();
+  updatePrintSizing();
+}
+
+function updateProject() {
+  const start = parseTime(el.rangeStart.value);
+  const end = parseTime(el.rangeEnd.value);
+  const requestedDayCount = Number(el.dayCount.value);
+  if (!rangeIsValid(start, end)) {
+    showStatus("The time range must be valid and use 15-minute increments.", true);
+    syncProjectInputs();
+    return;
+  }
+  const outOfRange = state.events.some((event) => event.start < start || eventEnd(event) > end);
+  if (outOfRange) {
+    showStatus("Cannot reduce the range: an activity would fall outside the timetable.", true);
+    syncProjectInputs();
+    return;
+  }
+  if (state.events.some((event) => event.day >= requestedDayCount)) {
+    showStatus("Delete activities from the days you want to remove first.", true);
+    syncProjectInputs();
+    return;
+  }
+  const nextProject = {
+    title: el.titleInput.value.trim() || "JMA TIMETABLE",
+    dayCount: requestedDayCount,
+    startDate: el.startDate.value,
+    rangeStart: el.rangeStart.value,
+    rangeEnd: el.rangeEnd.value
+  };
+  const changed = Object.entries(nextProject).some(([key, value]) => state[key] !== value);
+  if (!changed) return;
+  pushHistory();
+  Object.assign(state, nextProject);
+  if (state.selectedSlot.day >= state.dayCount) resetEditor({ day: state.dayCount - 1, minutes: start });
+  updateDayOptions();
+  persist();
+  render();
+}
+
+function exportProject() {
+  persist();
+  const data = localStorage.getItem(STORAGE_KEY);
+  const blob = new Blob([data], { type: "application/json" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `${(state.title || "planning").replace(/[^\p{L}\p{N}-]+/gu, "_")}.json`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+  showStatus("Project saved as JSON.");
+}
+
+function importProject(file) {
+  const reader = new FileReader();
+  reader.addEventListener("load", () => {
+    try {
+      const data = JSON.parse(reader.result);
+      if (!Array.isArray(data.events)) throw new Error("Invalid format");
+      const start = parseTime(data.rangeStart || "");
+      const end = parseTime(data.rangeEnd || "");
+      if (!rangeIsValid(start, end)) throw new Error("Invalid range");
+      const imported = {
+        title: String(data.title || "JMA TIMETABLE"),
+        dayCount: Math.max(1, Math.min(3, Number(data.dayCount) || 1)),
+        startDate: /^\d{4}-\d{2}-\d{2}$/.test(data.startDate) ? data.startDate : dateToInput(new Date()),
+        rangeStart: data.rangeStart,
+        rangeEnd: data.rangeEnd,
+        events: data.events.map(sanitizeEvent)
+      };
+      if (imported.events.some((event) => event.start < start || eventEnd(event) > end || event.day >= imported.dayCount)) {
+        throw new Error("Activity out of bounds");
+      }
+      pushHistory();
+      Object.assign(state, imported, { selectedId: null });
+      syncProjectInputs();
+      resetEditor({ day: 0, minutes: start });
+      persist();
+      render();
+      showStatus("Project opened.");
+    } catch {
+      showStatus("This file is not a valid Timetable project.", true);
+    } finally {
+      el.fileInput.value = "";
+    }
+  });
+  reader.readAsText(file);
+}
+
+function newProject() {
+  if (state.events.length && !confirm("Create a new project and clear the current timetable?")) return;
+  pushHistory();
+  Object.assign(state, {
+    title: "JMA TIMETABLE",
+    dayCount: 3,
+    startDate: dateToInput(new Date()),
+    rangeStart: "08:00",
+    rangeEnd: "18:00",
+    events: [],
+    selectedId: null,
+    selectedSlot: { day: 0, minutes: 8 * 60 }
+  });
+  syncProjectInputs();
+  resetEditor();
+  persist();
+  render();
+  showStatus("New project created.");
+}
+
+["titleInput", "startDate", "rangeStart", "rangeEnd"].forEach((id) => {
+  el[id].addEventListener("change", updateProject);
+});
+
+document.querySelectorAll("[data-days]").forEach((button) => {
+  button.addEventListener("click", () => {
+    el.dayCount.value = button.dataset.days;
+    document.querySelectorAll("[data-days]").forEach((item) => {
+      const active = item === button;
+      item.classList.toggle("active", active);
+      item.setAttribute("aria-pressed", String(active));
+    });
+    updateProject();
+  });
+});
+
+["eventStart", "duration"].forEach((id) => el[id].addEventListener("change", updateCalculatedEnd));
+document.getElementById("durationDown").addEventListener("click", () => {
+  el.duration.value = String(Math.max(SLOT_MINUTES, clampDuration(el.duration.value) - SLOT_MINUTES));
+  updateCalculatedEnd();
+});
+document.getElementById("durationUp").addEventListener("click", () => {
+  el.duration.value = String(clampDuration(el.duration.value) + SLOT_MINUTES);
+  updateCalculatedEnd();
+});
+
+el.eventType.addEventListener("change", () => applyPreset(el.eventType.value));
+document.getElementById("electricBlueBtn").addEventListener("click", () => {
+  el.textColor.value = "#0066ff";
+});
+el.boldBtn.addEventListener("click", () => setToggle(el.boldBtn, !el.boldBtn.classList.contains("active")));
+el.italicBtn.addEventListener("click", () => setToggle(el.italicBtn, !el.italicBtn.classList.contains("active")));
+el.saveEventBtn.addEventListener("click", saveEvent);
+el.insertBeforeBtn.addEventListener("click", insertBefore);
+el.deleteEventBtn.addEventListener("click", deleteSelectedEvent);
+document.getElementById("clearEditorBtn").addEventListener("click", () => {
+  resetEditor();
+  closeEventDialog();
+});
+
+el.timetable.addEventListener("click", (event) => {
+  if (Date.now() < suppressClickUntil) return;
+  const eventCell = event.target.closest("[data-event-id]");
+  if (eventCell) {
+    const item = state.events.find((candidate) => candidate.id === eventCell.dataset.eventId);
+    if (item) {
+      loadEventIntoEditor(item);
+      openEventDialog();
+    }
+    return;
+  }
+  const emptyCell = event.target.closest(".empty-activity");
+  if (!emptyCell) return;
+  resetEditor({
+    day: Number(emptyCell.dataset.day),
+    minutes: Number(emptyCell.dataset.minutes)
+  });
+  el.dialogTitle.textContent = "Add an activity";
+  openEventDialog();
+});
+
+el.timetable.addEventListener("dragstart", (event) => {
+  const cell = event.target.closest("[data-event-id]");
+  if (!cell) {
+    event.preventDefault();
+    return;
+  }
+  draggedEventId = cell.dataset.eventId;
+  state.selectedId = draggedEventId;
+  document.querySelectorAll(`[data-event-id="${CSS.escape(draggedEventId)}"]`).forEach((item) => {
+    item.classList.add("dragging");
+  });
+  event.dataTransfer.effectAllowed = "move";
+  event.dataTransfer.setData("text/plain", draggedEventId);
+});
+
+el.timetable.addEventListener("dragover", (event) => {
+  const cell = event.target.closest("td[data-day][data-minutes]");
+  if (!cell || !draggedEventId) return;
+  event.preventDefault();
+  const candidate = dropCandidate(dropPosition(cell));
+  event.dataTransfer.dropEffect = canDropEvent(candidate) ? "move" : "none";
+  highlightDropTarget(cell);
+});
+
+el.timetable.addEventListener("dragleave", (event) => {
+  if (!event.currentTarget.contains(event.relatedTarget)) clearDropTargets();
+});
+
+el.timetable.addEventListener("drop", (event) => {
+  const cell = event.target.closest("td[data-day][data-minutes]");
+  if (!cell || !draggedEventId) return;
+  event.preventDefault();
+  moveDraggedEvent(cell);
+  clearDropTargets();
+  suppressClickUntil = Date.now() + 250;
+});
+
+el.timetable.addEventListener("dragend", () => {
+  document.querySelectorAll(".dragging").forEach((cell) => cell.classList.remove("dragging"));
+  clearDropTargets();
+  draggedEventId = null;
+  suppressClickUntil = Date.now() + 250;
+});
+
+el.settingsBtn.addEventListener("click", () => {
+  setSettingsOpen(!el.workspace.classList.contains("settings-open"));
+});
+document.getElementById("closeSettingsBtn").addEventListener("click", () => setSettingsOpen(false));
+document.getElementById("closeDialogBtn").addEventListener("click", closeEventDialog);
+el.eventDialog.addEventListener("click", (event) => {
+  if (event.target === el.eventDialog) closeEventDialog();
+});
+
+document.getElementById("newBtn").addEventListener("click", newProject);
+el.undoBtn.addEventListener("click", undoLastChange);
+document.getElementById("saveBtn").addEventListener("click", exportProject);
+document.getElementById("openBtn").addEventListener("click", () => el.fileInput.click());
+el.fileInput.addEventListener("change", () => {
+  if (el.fileInput.files[0]) importProject(el.fileInput.files[0]);
+});
+document.getElementById("pdfBtn").addEventListener("click", () => {
+  state.selectedId = null;
+  renderSelection();
+  updatePrintSizing();
+  requestAnimationFrame(() => window.print());
+});
+
+const THEME_KEY = "jma-timetable-theme";
+
+function applyTheme(theme) {
+  const dark = theme === "dark";
+  document.documentElement.dataset.theme = dark ? "dark" : "light";
+  const button = document.getElementById("themeBtn");
+  button.setAttribute("aria-pressed", String(dark));
+  document.getElementById("themeLabel").textContent = dark ? "Light mode" : "Dark mode";
+}
+
+document.getElementById("themeBtn").addEventListener("click", () => {
+  const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+  applyTheme(next);
+  try { localStorage.setItem(THEME_KEY, next); } catch { /* storage unavailable */ }
+});
+
+let savedTheme = null;
+try { savedTheme = localStorage.getItem(THEME_KEY); } catch { /* storage unavailable */ }
+applyTheme(savedTheme === "dark" ? "dark" : "light");
+
+loadState();
+syncProjectInputs();
+resetEditor({ day: 0, minutes: parseTime(state.rangeStart) });
+render();
+updateUndoButton();
+
+</script>
+</body>
+</html>
