@@ -796,6 +796,154 @@ tbody tr:nth-child(4n + 1) td { border-top-color: var(--hour-line); }
   [data-theme="dark"] .button.primary { color: #fff; background: var(--mod-blue); }
 }
 
+@media screen and (max-width: 760px) {
+  html, body { width: 100%; min-width: 0; }
+  body { overflow-x: hidden; }
+
+  .topbar {
+    height: 92px;
+    padding: 0 20px;
+    background:
+      linear-gradient(var(--mod-yellow), var(--mod-yellow)) right 18px center / 42px 6px no-repeat,
+      linear-gradient(90deg, #fff 0 calc(100% - 76px), var(--mod-blue) calc(100% - 76px) 100%);
+  }
+  .titlebar { width: calc(100% - 76px); }
+  .brand {
+    display: block;
+    width: 100%;
+    padding-left: 24px;
+    padding-right: 12px;
+  }
+  .brand-mark { top: 17px; width: 16px; }
+  .brand h1 { font-size: clamp(24px, 8vw, 32px); }
+  .brand h1::before { margin-bottom: 4px; font-size: 10px; }
+  .titlebar-file { display: none; }
+
+  .ribbon {
+    position: sticky;
+    min-height: 58px;
+    gap: 0;
+    padding: 0 10px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .ribbon::-webkit-scrollbar { display: none; }
+  .ribbon-group { height: 58px; flex: none; }
+  .ribbon-spacer { min-width: 8px; }
+  .ribbon-btn {
+    width: 48px;
+    height: 58px;
+    justify-content: center;
+    padding: 0;
+  }
+  .ribbon-btn > span:not(.theme-icon) { display: none; }
+  .ribbon-btn::after { right: 7px; left: 7px; }
+  .ribbon-btn.primary-action {
+    width: auto;
+    height: 42px;
+    margin: 0 4px 0 8px;
+    padding: 0 14px;
+  }
+  .ribbon-btn.primary-action > span { display: inline; }
+  .ribbon-icon { width: 21px; height: 21px; }
+
+  .workspace,
+  .workspace.settings-open {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding: 22px 14px 30px;
+  }
+  .settings-drawer {
+    position: static;
+    width: 100%;
+    max-height: 0;
+    opacity: 0;
+    transform: translateY(-12px);
+    transition: max-height .32s ease, opacity .2s, transform .32s;
+  }
+  .settings-open .settings-drawer {
+    max-height: 850px;
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .drawer-inner { width: 100%; padding: 24px 20px 26px; }
+  .drawer-heading { align-items: flex-start; }
+  .drawer-heading > div { min-width: 0; }
+  .drawer-heading h2, .dialog-heading h2 { font-size: 22px; }
+  .project-settings {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+    margin-top: 22px;
+  }
+  .project-settings .span-2 { grid-column: span 1; }
+  .project-settings .field,
+  .project-settings .day-setting { min-width: 0; }
+  .project-settings .field:nth-last-child(-n + 2) { grid-column: auto; }
+  .project-settings .field input,
+  .project-settings .field select { min-width: 0; }
+
+  .preview { width: 100%; min-width: 0; }
+  .preview-heading {
+    display: block;
+    padding: 24px 20px 18px;
+  }
+  .preview-heading h2 { font-size: 31px; line-height: 1; }
+  .preview-heading > p { margin: 12px 0 0; font-size: 13px; }
+  .print-area { padding: 0 20px 22px; }
+  .table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  #timetable { min-width: 760px; }
+  tbody td { height: 32px; min-height: 32px; }
+  .status { padding: 0 14px 18px; }
+
+  .event-dialog {
+    width: calc(100vw - 20px);
+    max-height: calc(100dvh - 20px);
+  }
+  .dialog-shell { padding: 22px 18px 20px; }
+  .event-dialog .event-fields {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    margin-top: 20px;
+  }
+  .event-dialog .span-2 { grid-column: span 1; }
+  .event-dialog .field textarea { min-height: 76px; }
+  .format-box { gap: 8px 5px; padding: 12px; }
+  .format-box label { margin-right: 4px; }
+  .format-box select { margin-left: 0; }
+  .event-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 18px;
+  }
+  .event-actions .action-spacer { display: none; }
+  .event-actions .button { width: 100%; padding: 0 10px; }
+  .event-actions .danger { grid-column: span 2; grid-row: 2; }
+
+  [data-theme="dark"] .topbar {
+    background:
+      linear-gradient(var(--mod-yellow), var(--mod-yellow)) right 18px center / 42px 6px no-repeat,
+      linear-gradient(90deg, #172535 0 calc(100% - 76px), var(--mod-blue) calc(100% - 76px) 100%);
+  }
+}
+
+@media screen and (max-width: 420px) {
+  .brand h1 { font-size: 23px; }
+  .ribbon-btn { width: 44px; }
+  .ribbon-btn.primary-action { padding: 0 11px; }
+  .ribbon-btn.primary-action > span { font-size: 13px; }
+  .preview-heading h2 { font-size: 27px; }
+  .format-box select { width: 100%; }
+  .event-actions { grid-template-columns: 1fr; }
+  .event-actions .danger { grid-column: span 1; grid-row: auto; }
+}
+
 @page { size: A4 landscape; margin: 7mm; }
 @media print {
   /* Lock the original document formatting, independent of the screen UI theme */
