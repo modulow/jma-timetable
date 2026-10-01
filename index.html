@@ -765,6 +765,8 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
 .plan-add-col:disabled { cursor: not-allowed; opacity: .4; }
 .plan-col-line { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: color-mix(in srgb, var(--ink) 14%, transparent); pointer-events: none; }
 .plan-day-chooser { position: fixed; width: 1px; height: 1px; padding: 0; border: 0; opacity: 0; pointer-events: none; }
+.plan-day-chooser.is-visible { z-index: 400; width: auto; height: 40px; padding: 0 10px; border: 2px solid var(--ink); border-radius: 10px; background: var(--panel); color: var(--ink); opacity: 1; pointer-events: auto; box-shadow: 0 12px 28px -10px rgba(8,43,89,.5); }
+.plan-gap.drop-target, .plan-gap-head.drop-target, .plan-add-col.drop-target, .plan-add-head.drop-target { background: #1f6bff; color: #fff; }
 .plan-col-close { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border: 0; background: transparent; color: var(--muted); font-size: 16px; cursor: pointer; }
 .plan-col-close:hover { color: var(--ink); background: var(--hover); }
 .plan-col-head.today { box-shadow: inset 0 -3px 0 #fc4f00; }
@@ -4121,6 +4123,7 @@ function renderPlanBoard() {
       gapHead.textContent = "⋯";
       gapHead.title = gapTitle(index);
       gapHead.addEventListener("click", (event) => openPlanDayChooser(event, ...gapRange(index).map(iso)));
+      [gapHead.dataset.min, gapHead.dataset.max] = gapRange(index).map(iso);
       scale.append(gapHead);
     }
     const num = document.createElement("span");
@@ -4148,6 +4151,7 @@ function renderPlanBoard() {
   addHead.disabled = !canAdd;
   if (!canAdd) addHead.title = "The project end is reached — move the project end date to add days";
   addHead.addEventListener("click", (event) => openPlanDayChooser(event, ...addRange().map(iso)));
+  if (canAdd) [addHead.dataset.min, addHead.dataset.max] = addRange().map(iso);
   scale.append(addHead);
   board.append(scale);
 
@@ -4178,6 +4182,7 @@ function renderPlanBoard() {
       band.title = gapTitle(index);
       band.innerHTML = "<span>⋯</span>";
       band.addEventListener("click", (event) => openPlanDayChooser(event, ...gapRange(index).map(iso)));
+      [band.dataset.min, band.dataset.max] = gapRange(index).map(iso);
       canvas.append(band);
     }
     const line = document.createElement("div");
@@ -4258,6 +4263,7 @@ function renderPlanBoard() {
   addCol.title = addHead.title;
   addCol.innerHTML = "<span>+</span>";
   addCol.addEventListener("click", (event) => openPlanDayChooser(event, ...addRange().map(iso)));
+  if (canAdd) [addCol.dataset.min, addCol.dataset.max] = addRange().map(iso);
   canvas.append(addCol);
 
   canvas.addEventListener("dblclick", (event) => {
@@ -4309,9 +4315,10 @@ function planCanvasPosition(clientX, clientY, offX, offY) {
 let planPickerMonth = null;
 let planDayDrag = null;
 
-// Opens the browser calendar next to the click, limited to [minISO, maxISO]; the chosen day gets a new step.
-function openPlanDayChooser(event, minISO, maxISO) {
-  event.stopPropagation();
+// Opens the browser calendar next to the click, limited to [minISO, maxISO].
+// The chosen day gets a new step, unless an onPick callback handles it (drag & drop).
+function openPlanDayChooser(event, minISO, maxISO, onPick) {
+  if (event.stopPropagation) event.stopPropagation();
   if (!minISO || !maxISO || minISO > maxISO) {
     showStatus("No free day here — move the project end date to add days.", true);
     return;
@@ -4326,20 +4333,25 @@ function openPlanDayChooser(event, minISO, maxISO) {
     input.setAttribute("aria-hidden", "true");
     input.addEventListener("change", () => {
       const value = input.value;
-      if (value && value >= input.min && value <= input.max) openPlanDay(value);
+      input.classList.remove("is-visible");
+      if (value && value >= input.min && value <= input.max) (input.onPlanPick || openPlanDay)(value);
     });
+    input.addEventListener("blur", () => input.classList.remove("is-visible"));
     document.body.append(input);
   }
+  input.onPlanPick = onPick || null;
   input.min = minISO;
   input.max = maxISO;
   input.value = "";
-  input.style.left = `${Math.min(event.clientX, window.innerWidth - 20)}px`;
-  input.style.top = `${Math.min(event.clientY, window.innerHeight - 20)}px`;
+  input.style.left = `${Math.min(event.clientX, window.innerWidth - 200)}px`;
+  input.style.top = `${Math.min(event.clientY, window.innerHeight - 50)}px`;
   try {
     input.showPicker();
   } catch {
+    // No user activation left (long drag): show the date field so it can be opened by hand.
+    input.classList.add("is-visible");
+    input.removeAttribute("aria-hidden");
     input.focus();
-    input.click();
   }
 }
 
@@ -4582,6 +4594,24 @@ function planMoveDrag(event, d) {
   let offY = d.isNew ? 30 : d.offY;
   d.target = null;
 
+  const slot = under && under.closest(".plan-gap, .plan-gap-head, .plan-add-col, .plan-add-head");
+  if (slot && slot.dataset.min) {
+    slot.classList.add("drop-target");
+    const pos = planCanvasPosition(event.clientX, event.clientY, offX, offY);
+    d.target = {
+      type: slot.matches(".plan-add-col, .plan-add-head") ? "add" : "gap",
+      min: slot.dataset.min,
+      max: slot.dataset.max,
+      y: planSnapY(pos.y, planCardHeight(d.card)),
+      clientX: event.clientX,
+      clientY: event.clientY
+    };
+    d.float.style.left = `${event.clientX - offX}px`;
+    d.float.style.top = `${event.clientY - offY}px`;
+    autoScrollPlan(event);
+    return;
+  }
+
   if (canvas) {
     const colW = planColW();
     width = Math.max(1, d.card.duration) * colW - 16;
@@ -4682,6 +4712,11 @@ function finishPlanDrag(d) {
   }
 
   const t = d.target;
+  if (d.kind === "move" && t && (t.type === "gap" || t.type === "add")) {
+    renderPlan();
+    openPlanDayChooser({ clientX: t.clientX, clientY: t.clientY }, t.min, t.max, (iso) => placePlanCardOnDay(d, t, iso));
+    return;
+  }
   if (d.kind === "move") {
     if (!t) { renderPlan(); return; }
     if (d.isNew) planState.cards.push(d.card);
@@ -4718,6 +4753,29 @@ function finishPlanDrag(d) {
     persistPlan();
     renderPlan();
   }
+}
+
+// Drop on a "⋯" separator: the card moves to the picked day.
+// Drop on the "+" column: the card stretches up to the picked day (a card from the tray starts on the first free day).
+function placePlanCardOnDay(d, t, iso) {
+  const offset = daysBetween(parseISODate(planState.startDate), parseISODate(iso));
+  const card = d.card;
+  if (d.isNew && !planState.cards.includes(card)) planState.cards.push(card);
+  if (t.type === "gap") {
+    card.start = offset;
+    card.y = t.y;
+  } else {
+    if (card.start === null) {
+      card.start = daysBetween(parseISODate(planState.startDate), parseISODate(t.min));
+      card.y = t.y;
+    }
+    card.duration = Math.max(1, offset - card.start + 1);
+  }
+  persistPlan();
+  renderPlan();
+  if (d.isNew) openCardDialog(card, true);
+  const index = planDays().indexOf(offset);
+  if (index >= 0) planEl.wrap.scrollTo({ left: Math.max(0, planColX(planDays(), index) - 40), behavior: "smooth" });
 }
 
 function endPlanDrag(event, cancelled) {
