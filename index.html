@@ -764,8 +764,31 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
 .plan-add-col:hover:not(:disabled) span { transform: scale(1.12); background: #1f6bff; color: #fff; }
 .plan-add-col:disabled { cursor: not-allowed; opacity: .4; }
 .plan-col-line { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: color-mix(in srgb, var(--ink) 14%, transparent); pointer-events: none; }
-.plan-day-chooser { position: fixed; width: 1px; height: 1px; padding: 0; border: 0; opacity: 0; pointer-events: none; }
-.plan-day-chooser.is-visible { z-index: 400; width: auto; height: 40px; padding: 0 10px; border: 2px solid var(--ink); border-radius: 10px; background: var(--panel); color: var(--ink); opacity: 1; pointer-events: auto; box-shadow: 0 12px 28px -10px rgba(8,43,89,.5); }
+.plan-cal {
+  position: fixed;
+  z-index: 400;
+  width: 300px;
+  padding: 14px;
+  border: 2px solid var(--ink);
+  border-radius: 16px;
+  background: var(--panel);
+  color: var(--ink);
+  box-shadow: 0 22px 48px -16px rgba(8,43,89,.55);
+  animation: planCalIn .14s ease-out;
+}
+@keyframes planCalIn { from { opacity: 0; transform: translateY(6px) scale(.98); } }
+.plan-cal-head { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
+.plan-cal-title { flex: 1; font-size: 17px; font-weight: 900; text-transform: capitalize; }
+.plan-cal-nav { width: 34px; height: 34px; border: 2px solid var(--line); border-radius: 50%; background: var(--panel); color: var(--ink); font-size: 18px; font-weight: 900; cursor: pointer; }
+.plan-cal-nav:hover:not(:disabled) { border-color: var(--ink); }
+.plan-cal-nav:disabled { opacity: .3; cursor: default; }
+.plan-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+.plan-cal-wd { padding: 4px 0; font-size: 11px; font-weight: 800; color: var(--muted); text-align: center; text-transform: uppercase; }
+.plan-cal-day { height: 36px; border: 0; border-radius: 10px; background: transparent; color: var(--muted); font: inherit; font-size: 15px; font-weight: 700; opacity: .35; }
+.plan-cal-day.is-free { background: color-mix(in srgb, #1f6bff 10%, var(--panel)); color: var(--ink); opacity: 1; cursor: pointer; }
+.plan-cal-day.is-free:hover, .plan-cal-day.is-free:focus-visible { background: #1f6bff; color: #fff; outline: none; }
+.plan-cal-day.is-today { box-shadow: inset 0 0 0 2px #fc4f00; }
+.plan-cal-hint { margin-top: 10px; font-size: 12px; color: var(--muted); text-align: center; }
 .plan-gap.drop-target, .plan-gap-head.drop-target, .plan-add-col.drop-target, .plan-add-head.drop-target { background: #1f6bff; color: #fff; }
 .plan-col-close { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border: 0; background: transparent; color: var(--muted); font-size: 16px; cursor: pointer; }
 .plan-col-close:hover { color: var(--ink); background: var(--hover); }
@@ -4315,7 +4338,7 @@ function planCanvasPosition(clientX, clientY, offX, offY) {
 let planPickerMonth = null;
 let planDayDrag = null;
 
-// Opens the browser calendar next to the click, limited to [minISO, maxISO].
+// Opens a calendar next to the click, limited to [minISO, maxISO].
 // The chosen day gets a new step, unless an onPick callback handles it (drag & drop).
 function openPlanDayChooser(event, minISO, maxISO, onPick) {
   if (event.stopPropagation) event.stopPropagation();
@@ -4323,36 +4346,109 @@ function openPlanDayChooser(event, minISO, maxISO, onPick) {
     showStatus("No free day here — move the project end date to add days.", true);
     return;
   }
-  let input = document.getElementById("planDayChooser");
-  if (!input) {
-    input = document.createElement("input");
-    input.type = "date";
-    input.id = "planDayChooser";
-    input.className = "plan-day-chooser";
-    input.tabIndex = -1;
-    input.setAttribute("aria-hidden", "true");
-    input.addEventListener("change", () => {
-      const value = input.value;
-      input.classList.remove("is-visible");
-      if (value && value >= input.min && value <= input.max) (input.onPlanPick || openPlanDay)(value);
+  closePlanDayChooser();
+  // In-page calendar: the native picker refuses to open after a drag (no user activation).
+  const pop = document.createElement("div");
+  pop.className = "plan-cal";
+  pop.id = "planDayChooser";
+  pop.setAttribute("role", "dialog");
+  pop.dataset.min = minISO;
+  pop.dataset.max = maxISO;
+  const todayISO = toISODate(new Date());
+  const minDate = parseISODate(minISO);
+  const maxDate = parseISODate(maxISO);
+  let month = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+  const monthTitle = new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric" });
+  const pick = (iso) => {
+    closePlanDayChooser();
+    (onPick || openPlanDay)(iso);
+  };
+  const draw = () => {
+    pop.innerHTML = "";
+    const head = document.createElement("div");
+    head.className = "plan-cal-head";
+    const prev = document.createElement("button");
+    prev.type = "button";
+    prev.className = "plan-cal-nav";
+    prev.textContent = "‹";
+    prev.disabled = month <= new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+    prev.addEventListener("click", () => { month = new Date(month.getFullYear(), month.getMonth() - 1, 1); draw(); });
+    const title = document.createElement("div");
+    title.className = "plan-cal-title";
+    title.textContent = monthTitle.format(month);
+    const next = document.createElement("button");
+    next.type = "button";
+    next.className = "plan-cal-nav";
+    next.textContent = "›";
+    next.disabled = month >= new Date(maxDate.getFullYear(), maxDate.getMonth(), 1);
+    next.addEventListener("click", () => { month = new Date(month.getFullYear(), month.getMonth() + 1, 1); draw(); });
+    const close = document.createElement("button");
+    close.type = "button";
+    close.className = "plan-cal-nav";
+    close.textContent = "×";
+    close.title = "Cancel";
+    close.addEventListener("click", closePlanDayChooser);
+    head.append(prev, title, next, close);
+    const grid = document.createElement("div");
+    grid.className = "plan-cal-grid";
+    ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"].forEach((wd) => {
+      const cell = document.createElement("div");
+      cell.className = "plan-cal-wd";
+      cell.textContent = wd;
+      grid.append(cell);
     });
-    input.addEventListener("blur", () => input.classList.remove("is-visible"));
-    document.body.append(input);
-  }
-  input.onPlanPick = onPick || null;
-  input.min = minISO;
-  input.max = maxISO;
-  input.value = "";
-  input.style.left = `${Math.min(event.clientX, window.innerWidth - 200)}px`;
-  input.style.top = `${Math.min(event.clientY, window.innerHeight - 50)}px`;
-  try {
-    input.showPicker();
-  } catch {
-    // No user activation left (long drag): show the date field so it can be opened by hand.
-    input.classList.add("is-visible");
-    input.removeAttribute("aria-hidden");
-    input.focus();
-  }
+    const lead = (month.getDay() + 6) % 7;
+    for (let i = 0; i < lead; i += 1) grid.append(document.createElement("span"));
+    const daysInMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
+    let firstFree = null;
+    for (let day = 1; day <= daysInMonth; day += 1) {
+      const iso = toISODate(new Date(month.getFullYear(), month.getMonth(), day));
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "plan-cal-day";
+      btn.textContent = String(day);
+      btn.dataset.iso = iso;
+      if (iso === todayISO) btn.classList.add("is-today");
+      if (iso >= minISO && iso <= maxISO) {
+        btn.classList.add("is-free");
+        btn.addEventListener("click", () => pick(iso));
+        if (!firstFree) firstFree = btn;
+      } else {
+        btn.disabled = true;
+      }
+      grid.append(btn);
+    }
+    const hint = document.createElement("div");
+    hint.className = "plan-cal-hint";
+    hint.textContent = onPick ? "Pick the day for this step" : "Pick a day to add";
+    pop.append(head, grid, hint);
+    if (firstFree) firstFree.focus({ preventScroll: true });
+  };
+  draw();
+  document.body.append(pop);
+  const w = pop.offsetWidth;
+  const h = pop.offsetHeight;
+  pop.style.left = `${Math.max(8, Math.min(event.clientX - w / 2, window.innerWidth - w - 8))}px`;
+  pop.style.top = `${Math.max(8, Math.min(event.clientY + 12, window.innerHeight - h - 8))}px`;
+  if (!pop.querySelector(".is-free:focus")) pop.querySelector(".is-free")?.focus({ preventScroll: true });
+  const outside = (e) => { if (!pop.contains(e.target)) closePlanDayChooser(); };
+  const onKey = (e) => { if (e.key === "Escape") closePlanDayChooser(); };
+  pop.cleanup = () => {
+    document.removeEventListener("pointerdown", outside, true);
+    document.removeEventListener("keydown", onKey, true);
+  };
+  setTimeout(() => {
+    if (!pop.isConnected) return;
+    document.addEventListener("pointerdown", outside, true);
+    document.addEventListener("keydown", onKey, true);
+  }, 0);
+}
+
+function closePlanDayChooser() {
+  const pop = document.getElementById("planDayChooser");
+  if (!pop) return;
+  if (pop.cleanup) pop.cleanup();
+  pop.remove();
 }
 
 // Picking a day always creates a step on it and opens it; cancelling removes it (and the day).
