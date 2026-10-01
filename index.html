@@ -630,9 +630,10 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
   flex: 0 1 auto;
   min-width: 0;
   max-width: 100%;
-  height: calc(100vh - 230px);
-  min-height: 420px;
-  overflow: auto;
+  height: auto;
+  min-height: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
   border: 1px solid var(--line);
   border-radius: 16px;
   background: var(--panel);
