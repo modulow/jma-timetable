@@ -710,7 +710,9 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
   text-align: center;
   color: var(--ink);
 }
-.plan-col-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.plan-col-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; margin-left: -4px; }
+.plan-col-wd { flex: 0 0 auto; margin-left: -6px; font-size: 30px; font-weight: 900; line-height: 1; letter-spacing: -.04em; color: var(--ink); }
+.plan-col-head.today .plan-col-wd { color: #fc4f00; }
 .plan-col-head.today .plan-col-num { background: #fc4f00; color: #fff; box-shadow: 0 6px 14px -6px rgba(252,79,0,.7); }
 .plan-col-head:first-child { border-left: 0; }
 .plan-gap-head, .plan-add-head {
@@ -790,6 +792,19 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
 .plan-cal-day.is-today { box-shadow: inset 0 0 0 2px #fc4f00; }
 .plan-cal-hint { margin-top: 10px; font-size: 12px; color: var(--muted); text-align: center; }
 .plan-gap.drop-target, .plan-gap-head.drop-target, .plan-add-col.drop-target, .plan-add-head.drop-target { background: #1f6bff; color: #fff; }
+.plan-gap-veil {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 2;
+  width: var(--gap-w);
+  border-left: 2px solid var(--line);
+  border-right: 2px solid var(--line);
+  background: repeating-linear-gradient(135deg, var(--sub-bg) 0 6px, var(--panel) 6px 12px);
+  opacity: .78;
+  pointer-events: none;
+}
+.plan-gap-veil.drop-target { opacity: 0; }
 .plan-col-close { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border: 0; background: transparent; color: var(--muted); font-size: 16px; cursor: pointer; }
 .plan-col-close:hover { color: var(--ink); background: var(--hover); }
 .plan-col-head.today { box-shadow: inset 0 -3px 0 #fc4f00; }
@@ -4181,16 +4196,19 @@ function renderPlanBoard() {
     const num = document.createElement("span");
     num.className = "plan-col-num";
     num.textContent = String(date.getDate());
+    const wd = document.createElement("span");
+    wd.className = "plan-col-wd";
+    wd.textContent = weekdayFmt.format(date).replace(".", "");
     const text = document.createElement("span");
     text.className = "plan-col-text";
     const label = document.createElement("span");
     label.className = "plan-col-month";
-    label.textContent = `${weekdayFmt.format(date)} · ${monthFmt.format(date)}${date.getFullYear() !== new Date().getFullYear() ? ` ${date.getFullYear()}` : ""}`.toUpperCase();
+    label.textContent = `${monthFmt.format(date)}${date.getFullYear() !== new Date().getFullYear() ? ` ${date.getFullYear()}` : ""}`.toUpperCase();
     const sub = document.createElement("span");
     sub.className = "plan-col-day";
     sub.textContent = `Day ${offset + 1} · ${count} card${count === 1 ? "" : "s"}`;
     text.append(label, sub);
-    head.append(num, text);
+    head.append(num, wd, text);
     head.addEventListener("pointerdown", (event) => startPlanDayDrag(event, offset, head));
     scale.append(head);
   });
@@ -4305,6 +4323,16 @@ function renderPlanBoard() {
     el.style.width = `${rect.w}px`;
     el.style.height = `${rect.h}px`;
     canvas.append(el);
+  });
+
+  // A card crossing a "⋯" separator shows through it, faintly, as if it passed underneath.
+  days.forEach((offset, index) => {
+    if (!isGap(index)) return;
+    const veil = document.createElement("div");
+    veil.className = "plan-gap-veil";
+    veil.style.left = `${planColX(days, index) - PLAN_GAP_W}px`;
+    veil.dataset.min = iso(gapRange(index)[0]);
+    canvas.append(veil);
   });
 
   const addCol = document.createElement("button");
@@ -4722,6 +4750,7 @@ function planMoveDrag(event, d) {
   const slot = under && under.closest(".plan-gap, .plan-gap-head, .plan-add-col, .plan-add-head");
   if (slot && slot.dataset.min) {
     slot.classList.add("drop-target");
+    document.querySelectorAll(`.plan-gap-veil[data-min="${slot.dataset.min}"]`).forEach((n) => n.classList.add("drop-target"));
     const pos = planCanvasPosition(event.clientX, event.clientY, offX, offY);
     d.target = {
       type: slot.matches(".plan-add-col, .plan-add-head") ? "add" : "gap",
