@@ -3596,9 +3596,11 @@ const planColW = () => PLAN_COL_W.day;
 const planCardById = (id) => planState.cards.find((c) => c.id === id);
 
 // Only days that hold cards (or were opened from the calendar picker) are shown as columns.
+// A multi-day card only opens its first and last day.
+const planCardEnd = (c) => c.start + Math.max(1, c.duration) - 1;
 function planDays() {
   const set = new Set(planState.openDays || []);
-  planState.cards.forEach((c) => { if (c.start !== null) set.add(c.start); });
+  planState.cards.forEach((c) => { if (c.start !== null) { set.add(c.start); set.add(planCardEnd(c)); } });
   return [...set].sort((a, b) => a - b);
 }
 
@@ -3626,7 +3628,10 @@ function planCardLabel(card) {
   const base = work ? `${formatPlanDuration(card.duration)} · ⏱ ${work}` : formatPlanDuration(card.duration);
   if (card.start === null) return base;
   const y = planSnapY(card.y, planCardHeight(card));
-  return `${planTimeAt(y)}–${planTimeAt(y + planCardHeight(card))} · ${base}`;
+  const time = `${planTimeAt(y)}–${planTimeAt(y + planCardHeight(card))}`;
+  if (card.duration <= 1) return `${time} · ${base}`;
+  const fmt = (offset) => planAddDays(parseISODate(planState.startDate), offset).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  return `${fmt(card.start)} → ${fmt(planCardEnd(card))} · ${time} · ${base}`;
 }
 
 // The card height follows the time axis: its work time, or 1 hour when none is set.
@@ -3644,11 +3649,12 @@ function planCardRect(card) {
   const days = planDays();
   const colW = planColW();
   const index = Math.max(0, days.indexOf(card.start));
-  // Width follows the duration: one column per day, whatever days are open in between.
+  // Spans from its first-day column to its last-day column.
+  const endIndex = Math.max(index, days.indexOf(planCardEnd(card)));
   return {
     x: index * colW + 8,
     y: planSnapY(card.y, planCardHeight(card)),
-    w: Math.max(1, card.duration) * colW - 16,
+    w: (endIndex - index + 1) * colW - 16,
     h: planCardHeight(card)
   };
 }
@@ -3750,7 +3756,7 @@ function renderPlanBoard() {
   const start = parseISODate(planState.startDate);
   const todayOffset = daysBetween(start, new Date());
   const endOffset = planEndOffset();
-  const cols = planState.cards.reduce((max, c) => (c.start === null ? max : Math.max(max, days.indexOf(c.start) + Math.max(1, c.duration))), Math.max(1, days.length));
+  const cols = Math.max(1, days.length);
   const dateFmt = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short" });
 
   board.style.setProperty("--col-w", `${colW}px`);
@@ -3766,7 +3772,7 @@ function renderPlanBoard() {
   scale.className = "plan-scale";
   days.forEach((offset, index) => {
     const date = planAddDays(start, offset);
-    const count = planState.cards.filter((c) => c.start === offset).length;
+    const count = planState.cards.filter((c) => c.start !== null && (c.start === offset || planCardEnd(c) === offset)).length;
     const head = document.createElement("div");
     head.className = "plan-col-head";
     head.dataset.day = String(offset);
@@ -4232,7 +4238,8 @@ function planResizeDrag(event, d) {
   }
   const rect = planCardRect(d.card);
   d.el.style.left = `${rect.x}px`;
-  d.el.style.width = `${rect.w}px`;
+  // While stretching, preview one column per day; columns are compacted again on release.
+  d.el.style.width = `${Math.max(rect.w, Math.max(1, d.card.duration) * planColW() - 16)}px`;
   d.el.querySelector(".postit-dur").textContent = planCardLabel(d.card);
   autoScrollPlan(event);
 }
