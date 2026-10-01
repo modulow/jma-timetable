@@ -632,11 +632,42 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
   touch-action: none;
 }
 .plan-col-head:first-child { border-left: 0; }
-.plan-col-head.gap { padding-left: 16px; }
-.plan-col-head.gap::before { position: absolute; top: 0; bottom: 0; left: 0; width: 6px; background: repeating-linear-gradient(180deg, var(--ink) 0 3px, transparent 3px 6px); opacity: .45; content: ""; }
-.plan-col-gap { position: absolute; top: 4px; right: 6px; padding: 0 5px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); font-size: 10px; font-weight: 700; color: var(--muted); }
-.plan-gap-sep { position: absolute; top: 0; bottom: 0; width: 6px; margin-left: -3px; background: repeating-linear-gradient(180deg, var(--muted) 0 3px, transparent 3px 7px); opacity: .5; pointer-events: none; }
-.plan-col-head.gap .plan-col-close { top: 22px; }
+.plan-gap-head, .plan-add-head {
+  flex: 0 0 var(--gap-w);
+  border: 0;
+  border-left: 2px solid var(--line);
+  border-right: 2px solid var(--line);
+  background: var(--sub-bg);
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.plan-add-head { flex-basis: var(--add-w); border-right: 0; background: var(--panel); font-size: 22px; }
+.plan-gap-head:hover, .plan-add-head:hover:not(:disabled) { background: var(--hover); color: var(--ink); }
+.plan-add-head:disabled { cursor: not-allowed; opacity: .4; }
+.plan-gap, .plan-add-col {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 1;
+  width: var(--gap-w);
+  padding: 0;
+  border: 0;
+  border-left: 2px solid var(--line);
+  border-right: 2px solid var(--line);
+  background: var(--sub-bg);
+  color: var(--muted);
+  cursor: pointer;
+}
+.plan-gap span, .plan-add-col span { position: absolute; top: 140px; left: 0; right: 0; display: block; font-size: 18px; font-weight: 800; }
+.plan-add-col { width: var(--add-w); border-right: 0; background: transparent; }
+.plan-add-col span { left: 50%; right: auto; width: 36px; height: 36px; margin-left: -18px; border: 2px dashed var(--line); border-radius: 50%; line-height: 32px; font-size: 22px; }
+.plan-gap:hover, .plan-add-col:hover:not(:disabled) { background: var(--hover); color: var(--ink); }
+.plan-add-col:disabled { cursor: not-allowed; opacity: .4; }
+.plan-col-line { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--grid); pointer-events: none; }
+.plan-day-chooser { position: fixed; width: 1px; height: 1px; padding: 0; border: 0; opacity: 0; pointer-events: none; }
 .plan-col-close { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border: 0; background: transparent; color: var(--muted); font-size: 16px; cursor: pointer; }
 .plan-col-close:hover { color: var(--ink); background: var(--hover); }
 .plan-col-head.today { box-shadow: inset 0 -3px 0 #e5484d; }
@@ -648,7 +679,10 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
 .plan-col-today { position: absolute; top: 0; bottom: 0; width: var(--col-w); background: rgba(229,72,77,.05); pointer-events: none; }
 .plan-board.is-empty { display: block; }
 .plan-board-wrap:has(.plan-board.is-empty) { flex: 1; height: auto; min-height: 0; border: 0; background: transparent; }
-.plan-board-empty { margin: 0; padding: 40px 24px; font-size: 15px; color: var(--muted); }
+.plan-board-empty { display: flex; align-items: center; gap: 16px; margin: 0; padding: 32px 24px; font-size: 15px; color: var(--muted); }
+.plan-board-empty p { margin: 0; }
+.plan-add-btn { flex: 0 0 auto; width: 48px; height: 48px; border: 2px dashed var(--line); border-radius: 50%; background: var(--panel); color: var(--ink); font-size: 26px; font-weight: 800; cursor: pointer; }
+.plan-add-btn:hover { background: var(--hover); }
 .plan-picker { display: flex; flex-direction: column; gap: 6px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
 .plan-picker-nav { display: flex; align-items: center; justify-content: space-between; font-size: 11px; letter-spacing: .1em; }
 .plan-picker-nav button { width: 28px; height: 28px; border: 1px solid var(--line); background: var(--field); color: var(--ink); cursor: pointer; }
@@ -677,10 +711,9 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
 .plan-canvas {
   position: relative;
   background-image:
-    linear-gradient(to right, var(--grid) 1px, transparent 1px),
     linear-gradient(to bottom, var(--line) 1px, transparent 1px),
     linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
-  background-size: var(--col-w) 100%, 100% calc(var(--slot) * 2), 100% var(--slot);
+  background-size: 100% calc(var(--slot) * 2), 100% var(--slot);
   cursor: copy;
 }
 .plan-weekend { position: absolute; top: 0; bottom: 0; background: var(--sub-bg); pointer-events: none; }
@@ -3457,6 +3490,8 @@ const PLAN_DAY_END_H = 20;
 const PLAN_SLOT_PX = 32;
 const PLAN_SLOTS = (PLAN_DAY_END_H - PLAN_DAY_START_H) * 2;
 const PLAN_GUTTER_W = 56;
+const PLAN_GAP_W = 34;  // band between two non-consecutive days
+const PLAN_ADD_W = 56;  // "+" column after the last day
 const PLAN_CARD_H = PLAN_SLOT_PX * 2;
 const PLAN_SNAP_Y = PLAN_SLOT_PX;
 const DAY_MS = 86400000;
@@ -3715,16 +3750,24 @@ function planFreeY(dayOffset, exclude = null) {
   return planSnapY(bottom || PLAN_SLOT_PX * 4);
 }
 
+// Left edge of a day column: columns are colW wide, with a gap band before each non-consecutive day.
+function planColX(days, index) {
+  let gaps = 0;
+  for (let i = 1; i <= Math.min(index, days.length - 1); i += 1) if (days[i] - days[i - 1] > 1) gaps += 1;
+  return index * planColW() + gaps * PLAN_GAP_W;
+}
+
 function planCardRect(card) {
   const days = planDays();
   const colW = planColW();
   const index = Math.max(0, days.indexOf(card.start));
   // Spans from its first-day column to its last-day column.
   const endIndex = Math.max(index, days.indexOf(planCardEnd(card)));
+  const x = planColX(days, index);
   return {
-    x: index * colW + 8,
+    x: x + 8,
     y: planSnapY(card.y, planCardHeight(card)),
-    w: (endIndex - index + 1) * colW - 16,
+    w: planColX(days, endIndex) + colW - x - 16,
     h: planCardHeight(card)
   };
 }
@@ -3828,20 +3871,39 @@ function renderPlanBoard() {
   const endOffset = planEndOffset();
   const cols = Math.max(1, days.length);
   const dateFmt = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short" });
+  const iso = (offset) => toISODate(planAddDays(start, offset));
+  const lastAllowed = endOffset ? endOffset - 1 : 3650;
+  const isGap = (index) => index > 0 && days[index] - days[index - 1] > 1;
+  const gapRange = (index) => [days[index - 1] + 1, days[index] - 1];
+  const addRange = () => [days.length ? days[days.length - 1] + 1 : 0, lastAllowed];
+  const gapTitle = (index) => {
+    const n = days[index] - days[index - 1] - 1;
+    return `${n} day${n > 1 ? "s" : ""} without steps hidden · click to add a step on one of them`;
+  };
 
   board.style.setProperty("--col-w", `${colW}px`);
   board.style.setProperty("--slot", `${PLAN_SLOT_PX}px`);
+  board.style.setProperty("--gap-w", `${PLAN_GAP_W}px`);
+  board.style.setProperty("--add-w", `${PLAN_ADD_W}px`);
   board.classList.toggle("is-empty", !days.length);
   if (!days.length) {
-    // No step on the calendar: show no grid at all, only a hint.
+    // No step on the calendar: show no grid at all, only a hint and the "+" button.
     board.style.width = "";
-    const empty = document.createElement("p");
+    const empty = document.createElement("div");
     empty.className = "plan-board-empty";
-    empty.textContent = "No step yet. Pick a day in the calendar on the left to add the first step.";
+    const add = document.createElement("button");
+    add.type = "button";
+    add.className = "plan-add-btn";
+    add.textContent = "+";
+    add.title = "Add a step: pick a day";
+    add.addEventListener("click", (event) => openPlanDayChooser(event, ...addRange().map(iso)));
+    const text = document.createElement("p");
+    text.textContent = "No step yet. Click + (or pick a day in the calendar on the left) to add the first step.";
+    empty.append(add, text);
     board.append(empty);
     return;
   }
-  board.style.width = `${PLAN_GUTTER_W + cols * colW}px`;
+  board.style.width = `${PLAN_GUTTER_W + planColX(days, days.length - 1) + colW + PLAN_ADD_W}px`;
 
   const corner = document.createElement("div");
   corner.className = "plan-corner";
@@ -3859,13 +3921,14 @@ function renderPlanBoard() {
     head.title = "Drag onto another day to swap the two days";
     if (offset === todayOffset) head.classList.add("today");
     if (endOffset && offset >= endOffset) head.classList.add("after-end");
-    if (index > 0 && offset - days[index - 1] > 1) {
-      head.classList.add("gap");
-      const gap = document.createElement("span");
-      gap.className = "plan-col-gap";
-      gap.textContent = `⋯ +${offset - days[index - 1] - 1} d`;
-      gap.title = `Not consecutive: ${offset - days[index - 1] - 1} day(s) without cards hidden`;
-      head.append(gap);
+    if (isGap(index)) {
+      const gapHead = document.createElement("button");
+      gapHead.type = "button";
+      gapHead.className = "plan-gap-head";
+      gapHead.textContent = "⋯";
+      gapHead.title = gapTitle(index);
+      gapHead.addEventListener("click", (event) => openPlanDayChooser(event, ...gapRange(index).map(iso)));
+      scale.append(gapHead);
     }
     const label = document.createElement("span");
     label.className = "plan-col-month";
@@ -3877,6 +3940,16 @@ function renderPlanBoard() {
     head.addEventListener("pointerdown", (event) => startPlanDayDrag(event, offset, head));
     scale.append(head);
   });
+  const addHead = document.createElement("button");
+  addHead.type = "button";
+  addHead.className = "plan-add-head";
+  addHead.textContent = "+";
+  addHead.title = "Add a step after the last day: pick a day";
+  const canAdd = addRange()[0] <= addRange()[1];
+  addHead.disabled = !canAdd;
+  if (!canAdd) addHead.title = "The project end is reached — move the project end date to add days";
+  addHead.addEventListener("click", (event) => openPlanDayChooser(event, ...addRange().map(iso)));
+  scale.append(addHead);
   board.append(scale);
 
   const gutter = document.createElement("div");
@@ -3897,22 +3970,31 @@ function renderPlanBoard() {
   canvas.style.height = `${PLAN_SLOTS * PLAN_SLOT_PX}px`;
 
   days.forEach((offset, index) => {
-    if (index > 0 && offset - days[index - 1] > 1) {
-      const sep = document.createElement("div");
-      sep.className = "plan-gap-sep";
-      sep.style.left = `${index * colW}px`;
-      canvas.append(sep);
+    const x = planColX(days, index);
+    if (isGap(index)) {
+      const band = document.createElement("button");
+      band.type = "button";
+      band.className = "plan-gap";
+      band.style.left = `${x - PLAN_GAP_W}px`;
+      band.title = gapTitle(index);
+      band.innerHTML = "<span>⋯</span>";
+      band.addEventListener("click", (event) => openPlanDayChooser(event, ...gapRange(index).map(iso)));
+      canvas.append(band);
     }
+    const line = document.createElement("div");
+    line.className = "plan-col-line";
+    line.style.left = `${x + colW}px`;
+    canvas.append(line);
     if (offset === todayOffset) {
       const col = document.createElement("div");
       col.className = "plan-col-today";
-      col.style.left = `${index * colW}px`;
+      col.style.left = `${x}px`;
       canvas.append(col);
     }
     if (endOffset && offset >= endOffset) {
       const after = document.createElement("div");
       after.className = "plan-after-end";
-      after.style.left = `${index * colW}px`;
+      after.style.left = `${x}px`;
       after.style.width = `${colW}px`;
       if (index === 0 || days[index - 1] < endOffset) {
         const label = document.createElement("span");
@@ -3969,8 +4051,18 @@ function renderPlanBoard() {
     canvas.append(el);
   });
 
+  const addCol = document.createElement("button");
+  addCol.type = "button";
+  addCol.className = "plan-add-col";
+  addCol.style.left = `${planColX(days, days.length - 1) + colW}px`;
+  addCol.disabled = !canAdd;
+  addCol.title = addHead.title;
+  addCol.innerHTML = "<span>+</span>";
+  addCol.addEventListener("click", (event) => openPlanDayChooser(event, ...addRange().map(iso)));
+  canvas.append(addCol);
+
   canvas.addEventListener("dblclick", (event) => {
-    if (event.target.closest(".postit")) return;
+    if (event.target.closest(".postit, .plan-gap, .plan-add-col")) return;
     const pos = planCanvasPosition(event.clientX, event.clientY, 0, PLAN_CARD_H / 2);
     const card = newPlanCard(pos.start, pos.y);
     planState.cards.push(card);
@@ -4006,8 +4098,9 @@ function planCanvasPosition(clientX, clientY, offX, offY) {
   const canvas = document.getElementById("planCanvas");
   const rect = canvas.getBoundingClientRect();
   const days = planDays();
-  const colW = planColW();
-  const col = Math.min(Math.max(0, Math.floor((clientX - offX + colW / 2 - rect.left) / colW)), Math.max(0, days.length - 1));
+  const px = clientX - offX - rect.left;
+  let col = 0;
+  days.forEach((_, i) => { if (Math.abs(planColX(days, i) - px) < Math.abs(planColX(days, col) - px)) col = i; });
   const y = planSnapY(clientY - offY - rect.top);
   const fallback = Math.max(0, daysBetween(parseISODate(planState.startDate), new Date()));
   return { start: days.length ? days[col] : fallback, y, col };
@@ -4016,6 +4109,40 @@ function planCanvasPosition(clientX, clientY, offX, offY) {
 /* ----- Day columns: open from the calendar picker, swap by dragging headers ----- */
 let planPickerMonth = null;
 let planDayDrag = null;
+
+// Opens the browser calendar next to the click, limited to [minISO, maxISO]; the chosen day gets a new step.
+function openPlanDayChooser(event, minISO, maxISO) {
+  event.stopPropagation();
+  if (!minISO || !maxISO || minISO > maxISO) {
+    showStatus("No free day here — move the project end date to add days.", true);
+    return;
+  }
+  let input = document.getElementById("planDayChooser");
+  if (!input) {
+    input = document.createElement("input");
+    input.type = "date";
+    input.id = "planDayChooser";
+    input.className = "plan-day-chooser";
+    input.tabIndex = -1;
+    input.setAttribute("aria-hidden", "true");
+    input.addEventListener("change", () => {
+      const value = input.value;
+      if (value && value >= input.min && value <= input.max) openPlanDay(value);
+    });
+    document.body.append(input);
+  }
+  input.min = minISO;
+  input.max = maxISO;
+  input.value = "";
+  input.style.left = `${Math.min(event.clientX, window.innerWidth - 20)}px`;
+  input.style.top = `${Math.min(event.clientY, window.innerHeight - 20)}px`;
+  try {
+    input.showPicker();
+  } catch {
+    input.focus();
+    input.click();
+  }
+}
 
 // Picking a day always creates a step on it and opens it; cancelling removes it (and the day).
 function openPlanDay(iso) {
@@ -4039,7 +4166,7 @@ function openPlanDay(iso) {
   renderPlan();
   if (newCard) openCardDialog(newCard, true);
   const index = planDays().indexOf(offset);
-  planEl.wrap.scrollTo({ left: Math.max(0, index * planColW() - 40), behavior: "smooth" });
+  planEl.wrap.scrollTo({ left: Math.max(0, planColX(planDays(), index) - 40), behavior: "smooth" });
   const head = planEl.board.querySelector(`.plan-col-head[data-day="${offset}"]`);
   if (head) {
     head.classList.add("flash");
@@ -4267,7 +4394,7 @@ function planMoveDrag(event, d) {
     d.target = { type: "board", start: pos.start, y: pos.y };
     const ghost = document.createElement("div");
     ghost.className = "plan-ghost";
-    ghost.style.left = `${pos.col * colW + 8}px`;
+    ghost.style.left = `${planColX(planDays(), pos.col) + 8}px`;
     ghost.style.top = `${pos.y}px`;
     ghost.style.width = `${width}px`;
     ghost.style.height = `${height}px`;
