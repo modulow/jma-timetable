@@ -1089,6 +1089,7 @@ tbody tr:nth-child(4n + 1) td { border-top-color: var(--hour-line); }
 }
 
 </style>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 </head>
 <body>
   <main class="app">
@@ -1311,6 +1312,7 @@ tbody tr:nth-child(4n + 1) td { border-top-color: var(--hour-line); }
 
       <ul id="cloudList" class="cloud-list"></ul>
       <p id="cloudStatus" class="status" role="status" aria-live="polite"></p>
+      <div id="turnstileContainer" style="display:none"></div>
     </div>
   </dialog>
 
@@ -2565,6 +2567,35 @@ el.fileInput.addEventListener("change", () => {
 // See worker/README.md for deployment instructions. Left empty = feature disabled gracefully.
 const CLOUD_API_BASE = "https://jma-timetable-api.laurentanciaux.workers.dev";
 
+// Cloudflare Turnstile: silently proves a human triggered the save/delete,
+// since the shared library has no login. Rendered in "execute" mode so it
+// only runs (and shows a visible challenge, if ever needed) right when a
+// save/delete is attempted, not on every page load.
+const TURNSTILE_SITE_KEY = "0x4AAAAAAFLTrJxT91STTpK2";
+let turnstileWidgetId = null;
+let turnstilePending = null;
+
+function getTurnstileToken() {
+  if (typeof turnstile === "undefined") {
+    return Promise.reject(new Error("Human verification is still loading, try again in a moment."));
+  }
+  return new Promise((resolve, reject) => {
+    turnstilePending = { resolve, reject };
+    if (turnstileWidgetId === null) {
+      turnstileWidgetId = turnstile.render("#turnstileContainer", {
+        sitekey: TURNSTILE_SITE_KEY,
+        execution: "execute",
+        callback: (token) => { if (turnstilePending) { turnstilePending.resolve(token); turnstilePending = null; } },
+        "error-callback": () => { if (turnstilePending) { turnstilePending.reject(new Error("Human verification failed.")); turnstilePending = null; } },
+        "expired-callback": () => {}
+      });
+    } else {
+      turnstile.execute(turnstileWidgetId);
+    }
+  });
+}
+
+
 const cloudEl = {
   dialog: document.getElementById("cloudDialog"),
   list: document.getElementById("cloudList"),
@@ -2626,11 +2657,13 @@ async function refreshCloudList() {
 async function saveToCloud() {
   const name = cloudEl.saveName.value.trim() || state.title || "planning";
   try {
+    setCloudStatus("Verifying…");
+    const turnstileToken = await getTurnstileToken();
     persist();
     await cloudRequest("/api/save", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, data: snapshotState() })
+      body: JSON.stringify({ name, data: snapshotState(), turnstileToken })
     });
     setCloudStatus("Saved to the shared library.");
     cloudEl.saveName.value = "";
@@ -2653,7 +2686,9 @@ async function loadFromCloud(name) {
 async function deleteFromCloud(name) {
   if (!confirm(`Delete "${name}" from the shared library for everyone?`)) return;
   try {
-    await cloudRequest(`/api/delete?name=${encodeURIComponent(name)}`, { method: "DELETE" });
+    setCloudStatus("Verifying…");
+    const turnstileToken = await getTurnstileToken();
+    await cloudRequest(`/api/delete?name=${encodeURIComponent(name)}&turnstileToken=${encodeURIComponent(turnstileToken)}`, { method: "DELETE" });
     setCloudStatus("Deleted.");
     refreshCloudList();
   } catch (err) {
