@@ -804,6 +804,21 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
   pointer-events: none;
 }
 .plan-gap-veil.drop-target { opacity: 0; }
+.plan-gap-n { display: block; font-size: 24px; font-weight: 900; line-height: 1; letter-spacing: -.04em; color: var(--ink); }
+.plan-gap-unit { display: block; margin-top: 2px; font-size: 9px; font-weight: 800; line-height: 1; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.plan-gap-head { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0; }
+.plan-gap-head.drop-target .plan-gap-n, .plan-gap-head.drop-target .plan-gap-unit { color: #fff; }
+.plan-gap-label {
+  position: sticky;
+  top: 12px;
+  display: block;
+  margin: 12px 2px 0;
+  padding: 6px 0;
+  border-radius: 8px;
+  background: var(--panel);
+  text-align: center;
+  box-shadow: 0 2px 8px -3px rgba(8,43,89,.35);
+}
 .plan-col-close { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border: 0; background: transparent; color: var(--muted); font-size: 16px; cursor: pointer; }
 .plan-col-close:hover { color: var(--ink); background: var(--hover); }
 .plan-col-head.today { box-shadow: inset 0 -3px 0 #fc4f00; }
@@ -4141,6 +4156,10 @@ function renderPlanBoard() {
     const n = days[index] - days[index - 1] - 1;
     return `${n} day${n > 1 ? "s" : ""} without steps hidden · click to add a step on one of them`;
   };
+  const gapLabel = (index) => {
+    const n = days[index] - days[index - 1] - 1;
+    return `<b class="plan-gap-n">${n}</b><small class="plan-gap-unit">${n > 1 ? "days" : "day"}</small>`;
+  };
 
   board.style.setProperty("--col-w", `${colW}px`);
   board.style.setProperty("--slot", `${PLAN_SLOT_PX}px`);
@@ -4186,7 +4205,7 @@ function renderPlanBoard() {
       const gapHead = document.createElement("button");
       gapHead.type = "button";
       gapHead.className = "plan-gap-head";
-      gapHead.textContent = "⋯";
+      gapHead.innerHTML = gapLabel(index);
       gapHead.title = gapTitle(index);
       gapHead.addEventListener("click", (event) => openPlanDayChooser(event, ...gapRange(index).map(iso)));
       [gapHead.dataset.min, gapHead.dataset.max] = gapRange(index).map(iso);
@@ -4249,7 +4268,7 @@ function renderPlanBoard() {
       band.className = "plan-gap";
       band.style.left = `${x - PLAN_GAP_W}px`;
       band.title = gapTitle(index);
-      band.innerHTML = "<span>⋯</span>";
+      band.innerHTML = "";
       band.addEventListener("click", (event) => openPlanDayChooser(event, ...gapRange(index).map(iso)));
       [band.dataset.min, band.dataset.max] = gapRange(index).map(iso);
       canvas.append(band);
@@ -4331,6 +4350,7 @@ function renderPlanBoard() {
     veil.className = "plan-gap-veil";
     veil.style.left = `${planColX(days, index) - PLAN_GAP_W}px`;
     veil.dataset.min = iso(gapRange(index)[0]);
+    veil.innerHTML = `<span class="plan-gap-label">${gapLabel(index)}</span>`;
     canvas.append(veil);
   });
 
