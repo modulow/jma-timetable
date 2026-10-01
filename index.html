@@ -588,15 +588,26 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
   background: var(--field);
   color: var(--ink);
 }
+.postit-top { display: flex; align-items: center; gap: 8px; min-width: 0; padding-right: 12px; }
+.postit-time {
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
 .postit-step {
-  align-self: flex-start;
+  flex: 0 0 auto;
+  margin-left: auto;
   padding: 2px 7px;
   border-radius: 999px;
-  background: color-mix(in srgb, currentColor 16%, transparent);
+  background: color-mix(in srgb, currentColor 18%, transparent);
   font-size: 9px;
   font-weight: 900;
   letter-spacing: .14em;
 }
+.postit-top .postit-step:first-child { margin-left: 0; }
 .plan-tray-list { display: flex; flex-direction: column; gap: 10px; min-height: 80px; }
 .plan-tray-empty { margin: 0; font-size: 12px; line-height: 1.4; color: var(--muted); }
 .plan-new {
@@ -630,7 +641,7 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
 .plan-board {
   position: relative;
   display: grid;
-  grid-template-columns: 56px 1fr;
+  grid-template-columns: 64px 1fr;
   grid-template-rows: 62px auto;
 }
 .plan-corner {
@@ -642,24 +653,24 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
   align-items: flex-end;
   justify-content: center;
   padding-bottom: 6px;
-  border-right: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
+  border-right: 2px solid var(--ink);
+  border-bottom: 2px solid var(--ink);
   background: var(--panel);
   font-size: 10px;
-  font-weight: 800;
-  letter-spacing: .1em;
-  color: var(--muted);
+  font-weight: 900;
+  letter-spacing: .14em;
+  color: var(--ink);
 }
 .plan-hours {
   position: sticky;
   left: 0;
   z-index: 5;
-  border-right: 1px solid var(--line);
+  border-right: 2px solid var(--ink);
   background: var(--panel);
 }
-.plan-hours span { position: absolute; right: 6px; padding-top: 2px; line-height: 1; white-space: nowrap; pointer-events: none; }
-.plan-hours span.hour { font-size: 13px; font-weight: 900; color: var(--ink); letter-spacing: -.01em; }
-.plan-hours span.half { font-size: 10px; font-weight: 600; color: var(--muted); }
+.plan-hours span { position: absolute; right: 8px; padding-top: 3px; line-height: 1; white-space: nowrap; pointer-events: none; font-variant-numeric: tabular-nums; }
+.plan-hours span.hour { font-size: 16px; font-weight: 900; color: var(--ink); letter-spacing: -.02em; }
+.plan-hours span.half { font-size: 11px; font-weight: 700; color: var(--muted); }
 .plan-hours span:last-child { transform: translateY(-100%); padding: 0 0 2px; }
 .plan-scale {
   position: sticky;
@@ -751,7 +762,7 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
 .plan-gap:hover, .plan-add-col:hover:not(:disabled) { background: var(--hover); color: var(--ink); }
 .plan-add-col:hover:not(:disabled) span { transform: scale(1.12); background: #1f6bff; color: #fff; }
 .plan-add-col:disabled { cursor: not-allowed; opacity: .4; }
-.plan-col-line { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--grid); pointer-events: none; }
+.plan-col-line { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: color-mix(in srgb, var(--ink) 14%, transparent); pointer-events: none; }
 .plan-day-chooser { position: fixed; width: 1px; height: 1px; padding: 0; border: 0; opacity: 0; pointer-events: none; }
 .plan-col-close { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border: 0; background: transparent; color: var(--muted); font-size: 16px; cursor: pointer; }
 .plan-col-close:hover { color: var(--ink); background: var(--hover); }
@@ -795,10 +806,12 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
 .plan-col-day { display: block; font-size: 11px; font-weight: 600; color: var(--muted); }
 .plan-canvas {
   position: relative;
+  --band: color-mix(in srgb, var(--sub-bg) 65%, var(--panel));
   background-image:
-    linear-gradient(to bottom, var(--line) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
-  background-size: 100% calc(var(--slot) * 2), 100% var(--slot);
+    linear-gradient(to bottom, color-mix(in srgb, var(--ink) 22%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, transparent calc(var(--slot) - 1px), color-mix(in srgb, var(--ink) 8%, transparent) calc(var(--slot) - 1px), color-mix(in srgb, var(--ink) 8%, transparent) var(--slot), transparent var(--slot)),
+    linear-gradient(to bottom, var(--band) 50%, transparent 50%);
+  background-size: 100% calc(var(--slot) * 2), 100% calc(var(--slot) * 2), 100% calc(var(--slot) * 4);
   cursor: copy;
 }
 .plan-weekend { position: absolute; top: 0; bottom: 0; background: var(--sub-bg); pointer-events: none; }
@@ -3618,7 +3631,7 @@ const PLAN_DAY_START_H = 7;
 const PLAN_DAY_END_H = 20;
 const PLAN_SLOT_PX = 32;
 const PLAN_SLOTS = (PLAN_DAY_END_H - PLAN_DAY_START_H) * 2;
-const PLAN_GUTTER_W = 56;
+const PLAN_GUTTER_W = 64;
 const PLAN_GAP_W = 34;  // band between two non-consecutive days
 const PLAN_ADD_W = 56;  // "+" column after the last day
 const PLAN_CARD_H = PLAN_SLOT_PX * 2;
@@ -3868,6 +3881,26 @@ function planCardLabel(card) {
   return `${fmt(card.start)} → ${fmt(planCardEnd(card))} · ${time} · ${base}`;
 }
 
+// Board tiles show the time big at the top, so the footer keeps only dates and duration.
+function planCardMeta(card) {
+  const work = formatPlanHours(card.hours);
+  const base = work ? `${formatPlanDuration(card.duration)} · ⏱ ${work}` : formatPlanDuration(card.duration);
+  if (card.start === null || card.duration <= 1) return base;
+  const fmt = (offset) => planAddDays(parseISODate(planState.startDate), offset).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  return `${fmt(card.start)} → ${fmt(planCardEnd(card))} · ${base}`;
+}
+
+function planCardTime(card) {
+  const y = planSnapY(card.y, planCardHeight(card));
+  return `${planTimeAt(y)} – ${planTimeAt(y + planCardHeight(card))}`;
+}
+
+function refreshPostitLabels(el, card) {
+  const time = el.querySelector(".postit-time");
+  if (time) time.textContent = planCardTime(card);
+  el.querySelector(".postit-dur").textContent = time ? planCardMeta(card) : planCardLabel(card);
+}
+
 // The card height follows the time axis: its work time, or 1 hour when none is set.
 function planCardHeight(card) {
   return (card.hours || 1) * 2 * PLAN_SLOT_PX;
@@ -3919,12 +3952,21 @@ function createPostit(card, onBoard, stepNo) {
   el.style.setProperty("--pi-bg", bg);
   el.style.setProperty("--pi-fg", planInkFor(bg));
 
+  const top = document.createElement("div");
+  top.className = "postit-top";
+  if (onBoard && card.start !== null) {
+    const time = document.createElement("span");
+    time.className = "postit-time";
+    time.textContent = planCardTime(card);
+    top.append(time);
+  }
   if (stepNo) {
-    const step = document.createElement("div");
+    const step = document.createElement("span");
     step.className = "postit-step";
     step.textContent = `STEP ${stepNo}`;
-    el.append(step);
+    top.append(step);
   }
+  if (top.childElementCount) el.append(top);
   const title = document.createElement("div");
   title.className = "postit-title";
   title.textContent = card.title || "Untitled step";
@@ -3937,7 +3979,7 @@ function createPostit(card, onBoard, stepNo) {
   }
   const dur = document.createElement("span");
   dur.className = "postit-dur";
-  dur.textContent = planCardLabel(card);
+  dur.textContent = onBoard && card.start !== null ? planCardMeta(card) : planCardLabel(card);
   el.append(dur);
 
   if (onBoard) {
@@ -4577,7 +4619,7 @@ function planResizeDrag(event, d) {
     d.card.hours = Math.min(room, normalizePlanHours(base + steps / 2) || 0.5);
     d.el.classList.add("has-work");
     d.el.style.height = `${planCardHeight(d.card)}px`;
-    d.el.querySelector(".postit-dur").textContent = planCardLabel(d.card);
+    refreshPostitLabels(d.el, d.card);
     autoScrollPlan(event);
     return;
   }
@@ -4595,7 +4637,7 @@ function planResizeDrag(event, d) {
   d.el.style.left = `${rect.x}px`;
   // While stretching, preview one column per day; columns are compacted again on release.
   d.el.style.width = `${Math.max(rect.w, Math.max(1, d.card.duration) * planColW() - 16)}px`;
-  d.el.querySelector(".postit-dur").textContent = planCardLabel(d.card);
+  refreshPostitLabels(d.el, d.card);
   autoScrollPlan(event);
 }
 
