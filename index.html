@@ -434,7 +434,7 @@ tbody tr:nth-child(4n + 1) td { border-top-color: var(--hour-line); }
 .event-dialog .field textarea { min-height: 84px; }
 .dialog-heading-actions { gap: 10px; }
 
-/* ---------- Template chooser (mode picker) ---------- */
+/* ---------- Model chooser ---------- */
 .mode-dialog {
   width: min(760px, calc(100vw - 40px));
   max-height: calc(100vh - 40px);
@@ -448,7 +448,7 @@ tbody tr:nth-child(4n + 1) td { border-top-color: var(--hour-line); }
 .mode-dialog[open] { animation: dialog-in .16s ease-out; }
 .mode-shell { padding: 34px 38px; }
 .mode-shell h2 { margin: 2px 0 20px; font-size: 26px; }
-.mode-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.mode-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
 .mode-card {
   display: flex;
   flex-direction: column;
@@ -480,7 +480,7 @@ tbody tr:nth-child(4n + 1) td { border-top-color: var(--hour-line); }
 .human-gate-box h2 { margin: 0; font-size: 28px; letter-spacing: .04em; }
 .human-gate-box p { margin: 0; font-size: 15px; color: #555; }
 
-/* Planificator mode hides timetable-only ribbon actions */
+/* Mind Plan mode hides timetable-only ribbon actions */
 body[data-app-mode="planificator"] #undoBtn,
 body[data-app-mode="planificator"] #newBtn,
 body[data-app-mode="planificator"] #openBtn,
@@ -488,13 +488,14 @@ body[data-app-mode="planificator"] #saveBtn,
 body[data-app-mode="planificator"] #settingsBtn,
 body[data-app-mode="planificator"] #pdfBtn { display: none; }
 
-/* ---------- Planificator ---------- */
-.plan-workspace { display: flex; flex-direction: column; gap: 0; padding: 0; }
+/* ---------- Mind Plan: post-it mind map on a calendar ---------- */
+.plan-workspace { display: flex; flex-direction: column; padding: 0; }
 .plan-toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 12px;
-  padding: 16px 32px;
+  padding: 16px 32px 8px;
 }
 .plan-toolbar input[type="text"] {
   flex: 1;
@@ -505,86 +506,191 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
   border-radius: 2px;
   background: var(--field);
   color: var(--ink);
+  font-weight: 600;
 }
-.plan-columns {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(220px, 1fr);
-  gap: 18px;
-  overflow-x: auto;
-  padding: 0 32px 32px;
-}
-.plan-day {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 16px;
+.plan-toolbar label { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.plan-toolbar input[type="date"], .plan-toolbar select {
+  height: 40px;
+  padding: 0 10px;
   border: 1px solid var(--line);
+  border-radius: 2px;
+  background: var(--field);
+  color: var(--ink);
+}
+.plan-help { margin: 0; padding: 0 32px 12px; font-size: 13px; color: var(--muted); }
+.plan-body { display: flex; gap: 16px; align-items: stretch; padding: 0 32px 24px; }
+.plan-tray {
+  display: flex;
+  flex: 0 0 210px;
+  flex-direction: column;
+  gap: 12px;
+  height: calc(100vh - 230px);
+  min-height: 420px;
+  overflow-y: auto;
+  padding: 14px;
+  border: 1px dashed var(--faint);
   border-radius: 2px;
   background: var(--panel);
 }
-.plan-day-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.plan-day-head input[type="text"] {
+.plan-tray h3 { margin: 6px 0 0; font-size: 11px; letter-spacing: .14em; color: var(--muted); }
+.plan-quick-add {
+  height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: var(--field);
+  color: var(--ink);
+}
+.postit-step { font-size: 10px; font-weight: 800; letter-spacing: .12em; opacity: .55; }
+.plan-tray-list { display: flex; flex-direction: column; gap: 10px; min-height: 80px; }
+.plan-tray-empty { margin: 0; font-size: 12px; line-height: 1.4; color: var(--muted); }
+.plan-new {
+  display: grid;
+  place-items: center;
+  height: 70px;
+  border-radius: 2px;
+  color: #3d3500;
+  background: #fff3a3;
+  box-shadow: 3px 3px 0 #f1dd6a, 6px 6px 0 #e4cd4c;
+  font-weight: 700;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.plan-new:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.plan-tray.drop-target { border-color: var(--ink); background: var(--hover); }
+.plan-board-wrap {
+  position: relative;
   flex: 1;
-  height: 36px;
-  padding: 0 10px;
+  min-width: 0;
+  height: calc(100vh - 230px);
+  min-height: 420px;
+  overflow: auto;
   border: 1px solid var(--line);
-  border-radius: 2px;
-  background: var(--field);
-  color: var(--ink);
-  font-weight: 600;
+  background: var(--panel);
 }
-.plan-events { display: flex; flex-direction: column; gap: 8px; min-height: 8px; }
-.plan-event {
+.plan-board { position: relative; min-width: 100%; }
+.plan-scale {
+  position: sticky;
+  top: 0;
+  z-index: 6;
   display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 8px 10px;
-  border: 1px solid var(--line);
+  height: 46px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+.plan-col-head {
+  position: relative;
+  flex: 0 0 var(--col-w);
+  padding: 4px 0 0 6px;
+  border-left: 1px solid var(--grid);
+  overflow: hidden;
+  white-space: nowrap;
+}
+.plan-col-head.month-start { border-left: 2px solid var(--ink); }
+.plan-col-head.weekend { background: var(--sub-bg); }
+.plan-col-head.today { box-shadow: inset 0 -3px 0 #e5484d; }
+.plan-col-month { display: block; height: 16px; font-size: 11px; font-weight: 700; letter-spacing: .06em; color: var(--ink); }
+.plan-col-day { display: block; font-size: 12px; color: var(--muted); }
+.plan-canvas {
+  position: relative;
+  background-image: linear-gradient(to right, var(--grid) 1px, transparent 1px);
+  background-size: var(--col-w) 100%;
+  cursor: copy;
+}
+.plan-weekend { position: absolute; top: 0; bottom: 0; background: var(--sub-bg); pointer-events: none; }
+.plan-month-line { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--line); pointer-events: none; }
+.plan-today { position: absolute; top: 0; bottom: 0; width: 2px; background: #e5484d; opacity: .7; pointer-events: none; }
+.plan-links { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.plan-link { fill: none; stroke: #6b6b6b; stroke-width: 2; }
+.plan-link-hit { fill: none; stroke: transparent; stroke-width: 14; pointer-events: stroke; cursor: pointer; }
+.plan-link-hit:hover + .plan-link, .plan-link.temp { stroke: var(--ink); stroke-dasharray: 6 4; }
+.plan-links marker path { fill: #6b6b6b; }
+
+.postit {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-height: 70px;
+  padding: 8px 12px 18px;
   border-radius: 2px;
-  background: var(--field);
+  color: #1f1f1f;
+  background: var(--pi-bg, #fff3a3);
+  box-shadow: 0 1px 2px rgba(0,0,0,.15), 0 4px 10px rgba(0,0,0,.08);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  overflow: hidden;
+  transition: box-shadow .12s;
 }
-.plan-event-time { flex: 0 0 auto; min-width: 72px; font-size: 12px; color: var(--muted); white-space: nowrap; }
-.plan-event-title { flex: 1; font-size: 14px; line-height: 1.35; }
-.plan-event-del {
-  flex: 0 0 auto;
-  border: 0;
-  background: transparent;
-  color: var(--muted);
-  font-size: 16px;
-  line-height: 1;
+.postit:hover { box-shadow: 0 2px 4px rgba(0,0,0,.2), 0 8px 18px rgba(0,0,0,.12); }
+.postit:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.plan-tray .postit { position: relative; flex: none; }
+.postit-title { font-size: 13px; font-weight: 700; line-height: 1.2; overflow-wrap: anywhere; }
+.postit-desc {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.3;
+  opacity: .82;
+  white-space: pre-line;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
 }
-.plan-event-del:hover { color: var(--ink); }
-.plan-add-form { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
-.plan-add-form input[type="text"] {
-  flex: 1 1 100%;
+.postit-dur { position: absolute; right: 12px; bottom: 4px; font-size: 11px; font-weight: 700; opacity: .55; }
+.postit-handle { position: absolute; top: 0; bottom: 0; width: 10px; cursor: ew-resize; touch-action: none; }
+.postit-handle.l { left: 0; }
+.postit-handle.r { right: 0; }
+.postit-handle::after {
+  position: absolute;
+  top: 50%;
+  left: 4px;
+  width: 2px;
+  height: 22px;
+  margin-top: -11px;
+  border-radius: 1px;
+  background: rgba(0,0,0,.25);
+  content: "";
+  opacity: 0;
+}
+.postit:hover .postit-handle::after { opacity: 1; }
+.postit-link-dot {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  width: 14px;
+  height: 14px;
+  margin-top: -7px;
+  border: 2px solid #1f1f1f;
+  border-radius: 50%;
+  background: #fff;
+  cursor: crosshair;
+  opacity: 0;
+  touch-action: none;
+}
+.postit:hover .postit-link-dot, .postit:focus-within .postit-link-dot { opacity: .85; }
+.postit-source { opacity: .3; }
+.postit-float {
+  position: fixed;
+  z-index: 300;
+  margin: 0;
+  pointer-events: none;
+  box-shadow: 0 12px 28px rgba(0,0,0,.3);
+  transform: rotate(-2deg);
+}
+.postit.link-target { outline: 3px solid var(--ink); outline-offset: 2px; }
+.plan-ghost { position: absolute; border: 2px dashed var(--ink); border-radius: 2px; background: rgba(0,0,0,.04); pointer-events: none; }
+body.plan-dragging, body.plan-dragging * { cursor: grabbing !important; user-select: none; }
+.card-colors { display: flex; gap: 10px; flex-wrap: wrap; }
+.card-color {
+  width: 34px;
   height: 34px;
-  padding: 0 10px;
-  border: 1px solid var(--line);
+  border: 1px solid rgba(0,0,0,.2);
   border-radius: 2px;
-  background: var(--field);
-  color: var(--ink);
+  background: var(--swatch);
 }
-.plan-add-form label {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  color: var(--muted);
-}
-.plan-add-form input[type="time"] {
-  height: 30px;
-  padding: 0 6px;
-  border: 1px solid var(--line);
-  border-radius: 2px;
-  background: var(--field);
-  color: var(--ink);
-}
-.plan-add-form button {
-  margin-left: auto;
-}
-.plan-remove-day { align-self: flex-end; }
-.plan-print-area { padding: 0 32px 32px; }
+.card-color[aria-pressed="true"] { outline: 3px solid var(--ink); outline-offset: 2px; }
 
 /* ---------- Shared library dialog ---------- */
 .cloud-dialog { width: min(520px, calc(100vw - 40px)); }
@@ -1243,40 +1349,8 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
   }
   .event-time.selected, .event-activity.selected { box-shadow: none; }
 
-  /* ---------- Planificator print ---------- */
-  .plan-print-area { padding: 0; width: 100%; page-break-inside: avoid; break-inside: avoid-page; }
-  .plan-columns {
-    display: grid;
-    grid-template-columns: repeat(var(--plan-day-count, 1), 1fr);
-    gap: 4mm;
-    overflow: visible;
-  }
-  .plan-day {
-    border: 1px solid #8b9690;
-    border-radius: 0;
-    padding: 2mm;
-    break-inside: avoid-page;
-    background: #fff !important;
-  }
-  .plan-day-head { border: 0; }
-  .plan-day-head input {
-    border: 0;
-    background: transparent;
-    font-weight: 700;
-    padding: 0;
-    color: #1f2924;
-    font-size: var(--plan-font-size, 9pt);
-  }
-  .plan-events { gap: calc(var(--plan-font-size, 9pt) * .35); }
-  .plan-event {
-    border: 1px solid #c8d2cc;
-    border-radius: 0;
-    padding: .5mm 1mm;
-    background: #fff !important;
-  }
-  .plan-event-time { font-size: calc(var(--plan-font-size, 9pt) - 1pt); min-width: 0; }
-  .plan-event-title { font-size: var(--plan-font-size, 9pt); line-height: 1.1; }
-  .plan-event-del, .plan-add-form, .plan-remove-day, .plan-add-day-ghost { display: none !important; }
+  /* Mind Plan is screen-only: never printed */
+  body[data-app-mode="planificator"] #planWorkspace { display: none !important; }
 }
 
 </style>
@@ -1317,8 +1391,8 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
           <button id="settingsBtn" class="ribbon-btn settings-button" type="button" aria-expanded="false">
             <svg class="ribbon-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg><span>Settings</span>
           </button>
-          <button id="templateBtn" class="ribbon-btn" type="button" title="Switch template">
-            <svg class="ribbon-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg><span>Template</span>
+          <button id="templateBtn" class="ribbon-btn" type="button" title="Switch model">
+            <svg class="ribbon-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg><span>Model</span>
           </button>
         </div>
         <span class="ribbon-spacer"></span>
@@ -1409,17 +1483,29 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
 
     <section id="planWorkspace" class="workspace plan-workspace" hidden>
       <div class="plan-toolbar">
-        <input id="planTitleInput" type="text" value="PLANIFICATOR" maxlength="80" aria-label="Plan title">
-        <button id="planAddDayBtn" class="button secondary" type="button">Add day</button>
-        <button id="planPdfBtn" class="ribbon-btn primary-action" type="button">
-          <svg class="ribbon-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9V3h10v6"/><path d="M7 17H5a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-2"/><path d="M7 14h10v7H7z"/></svg><span>Preview / PDF</span>
-        </button>
+        <input id="planTitleInput" type="text" value="MIND PLAN" maxlength="80" aria-label="Plan title">
+        <label>Project start <input id="planStartInput" type="date"></label>
+        <label>Scale
+          <select id="planScaleSelect">
+            <option value="day">Days</option>
+            <option value="week">Weeks</option>
+          </select>
+        </label>
+        <button id="planTodayBtn" class="button secondary" type="button">Today</button>
+        <button id="planLineUpBtn" class="button secondary" type="button" title="Place every idea from the left column on the calendar, one after the other, linked as steps">Line up ideas as steps</button>
+        <button id="planAutoBtn" class="button primary" type="button" title="Each linked step starts when the previous one ends">Auto-schedule</button>
       </div>
-      <div id="planPrintArea" class="plan-print-area">
-        <div class="print-title">
-          <h2 id="planPrintTitle">PLANIFICATOR</h2>
+      <p class="plan-help">Type ideas on the left (Enter) · drag them onto the calendar or click “Line up ideas as steps” · drag to move · stretch the edges to change the duration · drag the ● dot onto another card to link steps · “Auto-schedule” chains linked steps in time · click a card to edit it.</p>
+      <div class="plan-body">
+        <aside id="planTray" class="plan-tray" aria-label="Ideas">
+          <input id="planQuickAdd" class="plan-quick-add" type="text" maxlength="120" placeholder="Type an idea + Enter" aria-label="Quick add idea">
+          <div id="planNewCard" class="plan-new" role="button" tabindex="0">+ New post-it</div>
+          <h3>IDEAS · NOT SCHEDULED</h3>
+          <div id="planTrayList" class="plan-tray-list"></div>
+        </aside>
+        <div id="planBoardWrap" class="plan-board-wrap">
+          <div id="planBoard" class="plan-board"></div>
         </div>
-        <div id="planColumns" class="plan-columns"></div>
       </div>
     </section>
 
@@ -1438,8 +1524,12 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
   <dialog id="modeDialog" class="mode-dialog">
     <div class="mode-shell">
       <p class="step">GET STARTED</p>
-      <h2>Choose your template</h2>
+      <h2>Choose your model</h2>
       <div class="mode-grid">
+        <button class="mode-card" type="button" data-mode="jma">
+          <strong>JMA Timetable</strong>
+          <span>The original JMA timetable: 3 days on a 15-minute grid.</span>
+        </button>
         <button class="mode-card" type="button" data-mode="timetable">
           <strong>Timetable</strong>
           <span>Multi-day schedule on a 15-minute grid, full cell formatting.</span>
@@ -1449,11 +1539,11 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
           <span>Same timetable tool, locked to a single day.</span>
         </button>
         <button class="mode-card" type="button" data-mode="planificator">
-          <strong>Planificator</strong>
-          <span>Flexible day-by-day agenda, no fixed time grid — add events with optional times.</span>
+          <strong>Mind Plan</strong>
+          <span>Organise project ideas into steps: post-its you drag, link and stretch on a calendar.</span>
         </button>
       </div>
-      <p class="mode-footnote">You can switch templates anytime from the "Template" button.</p>
+      <p class="mode-footnote">You can switch models anytime from the "Model" button.</p>
     </div>
   </dialog>
 
@@ -1530,6 +1620,34 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
         <button id="clearEditorBtn" class="button secondary" type="button">Cancel</button>
         <button id="insertBeforeBtn" class="button secondary" type="button">Insert before</button>
         <button id="saveEventBtn" class="button primary" type="button">Add activity</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="cardDialog" class="event-dialog card-dialog">
+    <form method="dialog" class="dialog-shell" novalidate>
+      <div class="dialog-heading">
+        <div>
+          <p class="step">PROJECT STEP</p>
+          <h2 id="cardDialogTitle">Edit step</h2>
+        </div>
+        <button id="cardCloseBtn" class="icon-button" type="button" aria-label="Close">×</button>
+      </div>
+      <div class="event-fields">
+        <label class="field span-2"><span>Title</span><input id="cardTitle" type="text" maxlength="120"></label>
+        <label class="field span-2"><span>Description</span><textarea id="cardDesc" rows="4" maxlength="1000" placeholder="What happens in this step?"></textarea></label>
+        <label class="field"><span>Duration</span><input id="cardDuration" type="number" min="1" max="999" value="3"></label>
+        <label class="field"><span>Unit</span>
+          <select id="cardUnit"><option value="1">Days</option><option value="7">Weeks</option></select>
+        </label>
+        <label class="field span-2"><span>Start date (empty = idea, not scheduled)</span><input id="cardStart" type="date"></label>
+        <div class="field span-2"><span>Color</span><div id="cardColors" class="card-colors"></div></div>
+      </div>
+      <div class="event-actions">
+        <button id="cardDeleteBtn" class="button danger" type="button">Delete</button>
+        <span class="action-spacer"></span>
+        <button id="cardCancelBtn" class="button secondary" type="button">Cancel</button>
+        <button id="cardSaveBtn" class="button primary" type="button">Save</button>
       </div>
     </form>
   </dialog>
@@ -1959,7 +2077,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
 
 </script>
   <script>
-const STORAGE_KEY = "jma-timetable-generator-v2";
+let STORAGE_KEY = "jma-timetable-generator-v2";
 const SLOT_MINUTES = 15;
 const MAX_HISTORY = 5;
 const history = [];
@@ -2967,7 +3085,7 @@ async function loadFromCloud(name) {
     const { data } = await cloudRequest(`/api/load?name=${encodeURIComponent(name)}`, { method: "GET" });
     if (document.body.dataset.appMode === "planificator") {
       const loaded = normalizePlanData(data);
-      if (!loaded) throw new Error("This file is not a Planificator plan.");
+      if (!loaded) throw new Error("This file is not a Mind Plan.");
       planState = loaded;
       persistPlan();
       renderPlan();
@@ -2997,7 +3115,7 @@ async function deleteFromCloud(name) {
 function openCloudDialog() {
   const mode = document.body.dataset.appMode;
   document.getElementById("cloudHeading").textContent = mode === "planificator"
-    ? "Team plans"
+    ? "Team mind plans"
     : mode === "oneday" ? "Team one-day events" : "Team timetables";
   if (typeof cloudEl.dialog.showModal === "function") cloudEl.dialog.showModal();
   else cloudEl.dialog.setAttribute("open", "");
@@ -3227,39 +3345,123 @@ let savedTheme = null;
 try { savedTheme = localStorage.getItem(THEME_KEY); } catch { /* storage unavailable */ }
 applyTheme(savedTheme === "dark" ? "dark" : "light");
 
-/* ---------------- Planificator ---------------- */
+/* ---------------- Mind Plan: post-it mind map on a calendar ---------------- */
 const PLAN_KEY = "jma-planificator-v1";
+const PLAN_COLORS = {
+  yellow: "#fff3a3",
+  pink: "#ffc9de",
+  blue: "#c4e2ff",
+  green: "#cdf0c4",
+  orange: "#ffd9ad",
+  purple: "#ddd0ff",
+  grey: "#e6e6e6"
+};
+const PLAN_COLOR_NAMES = Object.keys(PLAN_COLORS);
+const PLAN_COL_W = { day: 52, week: 116 };
+const PLAN_CARD_H = 84;
+const PLAN_SNAP_Y = 8;
+const DAY_MS = 86400000;
 
-function makeId() {
-  return crypto.randomUUID ? crypto.randomUUID() : `id-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+const pad2 = (n) => String(n).padStart(2, "0");
+function toISODate(date) { return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`; }
+function parseISODate(str) { const [y, m, d] = str.split("-").map(Number); return new Date(y, m - 1, d); }
+function planAddDays(date, n) { const d = new Date(date.getFullYear(), date.getMonth(), date.getDate()); d.setDate(d.getDate() + n); return d; }
+function daysBetween(a, b) {
+  return Math.round((Date.UTC(b.getFullYear(), b.getMonth(), b.getDate()) - Date.UTC(a.getFullYear(), a.getMonth(), a.getDate())) / DAY_MS);
 }
+function mondayOf(date) { return planAddDays(date, -((date.getDay() + 6) % 7)); }
+function isoWeek(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const day = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil(((d - yearStart) / DAY_MS + 1) / 7);
+}
+const isValidISODate = (str) => typeof str === "string" && /^\d{4}-\d{2}-\d{2}$/.test(str) && !Number.isNaN(parseISODate(str).getTime());
 
 function defaultPlanState() {
-  return { title: "PLAN IT", days: [{ id: makeId(), label: "Day 1", events: [] }] };
+  const card = (title, desc, start, duration, y, color) => ({ id: makeId(), title, desc, start, duration, y, color });
+  const kickoff = card("Kick-off", "Goals, team, budget", 0, 2, 24, "orange");
+  const research = card("Research", "Benchmark and needs", 2, 5, 24, "blue");
+  const interviews = card("User interviews", "5 to 8 people", 3, 4, 140, "blue");
+  const design = card("Design", "Concept and mock-ups", 7, 5, 24, "purple");
+  const build = card("Build", "Develop the first version", 12, 10, 24, "green");
+  const test = card("Test", "Feedback and fixes", 22, 4, 24, "pink");
+  const launch = card("Launch", "Go live 🚀", 26, 1, 24, "yellow");
+  const link = (from, to) => ({ id: makeId(), from: from.id, to: to.id });
+  return {
+    title: "MIND PLAN",
+    startDate: toISODate(mondayOf(new Date())),
+    scale: "day",
+    cards: [
+      kickoff, research, interviews, design, build, test, launch,
+      card("Newsletter?", "Idea to explore", null, 2, 0, "yellow"),
+      card("Partner event", "Who could join?", null, 3, 0, "grey")
+    ],
+    links: [link(kickoff, research), link(research, interviews), link(research, design), link(interviews, design), link(design, build), link(build, test), link(test, launch)]
+  };
 }
 
 let planState = defaultPlanState();
 
 function normalizePlanData(data) {
-  if (!data || !Array.isArray(data.days) || !data.days.length) return null;
-  return {
-    title: typeof data.title === "string" && data.title.trim() ? data.title : "PLANIFICATOR",
-    days: data.days.map((day) => ({
-      id: day && day.id ? String(day.id) : makeId(),
-      label: day && typeof day.label === "string" ? day.label : "Day",
-      events: Array.isArray(day && day.events) ? day.events.map((ev) => ({
-        id: ev && ev.id ? String(ev.id) : makeId(),
-        title: ev && typeof ev.title === "string" ? ev.title : "",
-        start: ev && typeof ev.start === "string" ? ev.start : "",
-        end: ev && typeof ev.end === "string" ? ev.end : ""
-      })) : []
-    }))
-  };
+  if (!data || typeof data !== "object") return null;
+  const text = (value, max) => (typeof value === "string" ? value : "").slice(0, max);
+  const title = typeof data.title === "string" && data.title.trim() ? data.title.slice(0, 80) : "MIND PLAN";
+
+  if (Array.isArray(data.cards)) {
+    const cards = data.cards.filter((c) => c && typeof c === "object").map((c) => {
+      const startNum = Math.round(Number(c.start));
+      const start = c.start === null || c.start === undefined || c.start === "" || !Number.isFinite(startNum) ? null : Math.max(0, startNum);
+      return {
+        id: c.id ? String(c.id) : makeId(),
+        title: text(c.title, 120),
+        desc: text(c.desc, 1000),
+        color: PLAN_COLORS[c.color] ? c.color : "yellow",
+        duration: Math.min(3650, Math.max(1, Math.round(Number(c.duration)) || 1)),
+        start,
+        y: Math.max(0, Math.round(Number(c.y)) || 0)
+      };
+    });
+    const ids = new Set(cards.map((c) => c.id));
+    const links = (Array.isArray(data.links) ? data.links : [])
+      .filter((l) => l && ids.has(String(l.from)) && ids.has(String(l.to)) && String(l.from) !== String(l.to))
+      .map((l) => ({ id: l.id ? String(l.id) : makeId(), from: String(l.from), to: String(l.to) }));
+    return {
+      title,
+      startDate: isValidISODate(data.startDate) ? data.startDate : toISODate(mondayOf(new Date())),
+      scale: data.scale === "week" ? "week" : "day",
+      cards,
+      links
+    };
+  }
+
+  // Older day-column format: each event becomes a card on its day.
+  if (Array.isArray(data.days)) {
+    const cards = [];
+    data.days.forEach((day, dayIndex) => {
+      (Array.isArray(day && day.events) ? day.events : []).forEach((ev, evIndex) => {
+        const times = [ev && ev.start, ev && ev.end].filter((t) => typeof t === "string" && t).join("–");
+        cards.push({
+          id: makeId(),
+          title: text(ev && ev.title, 120) || "Step",
+          desc: times,
+          color: "yellow",
+          duration: 1,
+          start: dayIndex,
+          y: 24 + evIndex * (PLAN_CARD_H + 16)
+        });
+      });
+    });
+    return { title, startDate: toISODate(mondayOf(new Date())), scale: "day", cards, links: [] };
+  }
+  return null;
 }
 
 function loadPlanState() {
   try {
-    const loaded = normalizePlanData(JSON.parse(localStorage.getItem(PLAN_KEY)));
+    const raw = localStorage.getItem(PLAN_KEY);
+    const loaded = raw ? normalizePlanData(JSON.parse(raw)) : null;
     if (loaded) planState = loaded;
   } catch { /* storage unavailable or corrupt */ }
 }
@@ -3268,147 +3470,729 @@ function persistPlan() {
   try { localStorage.setItem(PLAN_KEY, JSON.stringify(planState)); } catch { /* storage unavailable */ }
 }
 
-function updatePlanPrintSizing() {
-  const dayCount = Math.max(1, Math.min(6, planState.days.length));
-  const maxEvents = planState.days.reduce((max, day) => Math.max(max, day.events.length), 0);
-  const rows = Math.max(1, maxEvents) + 1;
-  const fontSize = Math.max(6.5, Math.min(11, 190 / (rows * 1.85)));
-  document.documentElement.style.setProperty("--plan-day-count", String(dayCount));
-  document.documentElement.style.setProperty("--plan-font-size", `${fontSize}pt`);
+const planEl = {
+  title: document.getElementById("planTitleInput"),
+  start: document.getElementById("planStartInput"),
+  scale: document.getElementById("planScaleSelect"),
+  today: document.getElementById("planTodayBtn"),
+  tray: document.getElementById("planTray"),
+  trayList: document.getElementById("planTrayList"),
+  newCard: document.getElementById("planNewCard"),
+  wrap: document.getElementById("planBoardWrap"),
+  board: document.getElementById("planBoard")
+};
+
+const planUnitDays = () => (planState.scale === "week" ? 7 : 1);
+const planColW = () => PLAN_COL_W[planState.scale] || PLAN_COL_W.day;
+const planCardById = (id) => planState.cards.find((c) => c.id === id);
+
+function formatPlanDuration(days) {
+  if (days >= 7 && days % 7 === 0) return `${days / 7} wk`;
+  return `${days} d`;
+}
+
+function planCardRect(card) {
+  const unit = planUnitDays();
+  const colW = planColW();
+  return {
+    x: (card.start / unit) * colW + 3,
+    y: card.y,
+    w: Math.max(44, (card.duration / unit) * colW - 6),
+    h: PLAN_CARD_H
+  };
+}
+
+function planColumnCount() {
+  const unit = planUnitDays();
+  const maxEnd = planState.cards.reduce((max, c) => (c.start === null ? max : Math.max(max, c.start + c.duration)), 0);
+  const visible = Math.ceil((planEl.wrap.clientWidth || 900) / planColW());
+  return Math.max(visible + 1, Math.ceil(maxEnd / unit) + (unit === 7 ? 6 : 14));
+}
+
+function createPostit(card, onBoard, stepNo) {
+  const el = document.createElement("div");
+  el.className = "postit";
+  el.dataset.id = card.id;
+  el.tabIndex = 0;
+  el.setAttribute("role", "button");
+  el.setAttribute("aria-label", `${card.title || "Untitled step"}, ${formatPlanDuration(card.duration)}`);
+  el.style.setProperty("--pi-bg", PLAN_COLORS[card.color] || PLAN_COLORS.yellow);
+
+  if (stepNo) {
+    const step = document.createElement("div");
+    step.className = "postit-step";
+    step.textContent = `STEP ${stepNo}`;
+    el.append(step);
+  }
+  const title = document.createElement("div");
+  title.className = "postit-title";
+  title.textContent = card.title || "Untitled step";
+  el.append(title);
+  if (card.desc) {
+    const desc = document.createElement("div");
+    desc.className = "postit-desc";
+    desc.textContent = card.desc;
+    el.append(desc);
+  }
+  const dur = document.createElement("span");
+  dur.className = "postit-dur";
+  dur.textContent = formatPlanDuration(card.duration);
+  el.append(dur);
+
+  if (onBoard) {
+    ["l", "r"].forEach((side) => {
+      const handle = document.createElement("span");
+      handle.className = `postit-handle ${side}`;
+      handle.title = "Stretch to change the duration";
+      handle.addEventListener("pointerdown", (event) => startPlanDrag(event, side === "l" ? "resize-l" : "resize-r", card, el));
+      el.append(handle);
+    });
+    const dot = document.createElement("span");
+    dot.className = "postit-link-dot";
+    dot.title = "Drag onto another card to link — or onto empty space to create a linked card";
+    dot.addEventListener("pointerdown", (event) => startPlanDrag(event, "link", card, el));
+    el.append(dot);
+  }
+
+  el.addEventListener("pointerdown", (event) => startPlanDrag(event, "move", card, el));
+  el.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      openCardDialog(card);
+    } else if (event.key === "Delete") {
+      event.preventDefault();
+      deletePlanCard(card);
+    }
+  });
+  return el;
 }
 
 function renderPlan() {
-  const titleInput = document.getElementById("planTitleInput");
-  if (document.activeElement !== titleInput) titleInput.value = planState.title;
-  document.getElementById("planPrintTitle").textContent = planState.title || "PLAN IT";
-
-  const columns = document.getElementById("planColumns");
-  columns.replaceChildren();
-
-  planState.days.forEach((day) => {
-    const dayEl = document.createElement("div");
-    dayEl.className = "plan-day";
-
-    const head = document.createElement("div");
-    head.className = "plan-day-head";
-    const labelInput = document.createElement("input");
-    labelInput.type = "text";
-    labelInput.value = day.label;
-    labelInput.maxLength = 60;
-    labelInput.addEventListener("change", () => {
-      day.label = labelInput.value.trim() || "Day";
-      persistPlan();
-    });
-    head.append(labelInput);
-    if (planState.days.length > 1) {
-      const removeBtn = document.createElement("button");
-      removeBtn.type = "button";
-      removeBtn.className = "button danger plan-remove-day";
-      removeBtn.textContent = "Remove";
-      removeBtn.addEventListener("click", () => {
-        planState.days = planState.days.filter((d) => d.id !== day.id);
-        persistPlan();
-        renderPlan();
-      });
-      head.append(removeBtn);
-    }
-    dayEl.append(head);
-
-    const eventsList = document.createElement("div");
-    eventsList.className = "plan-events";
-    day.events.forEach((ev) => {
-      const evEl = document.createElement("div");
-      evEl.className = "plan-event";
-      if (ev.start || ev.end) {
-        const timeEl = document.createElement("span");
-        timeEl.className = "plan-event-time";
-        timeEl.textContent = [ev.start, ev.end].filter(Boolean).join(" – ");
-        evEl.append(timeEl);
-      }
-      const titleEl = document.createElement("span");
-      titleEl.className = "plan-event-title";
-      titleEl.textContent = ev.title;
-      evEl.append(titleEl);
-      const delBtn = document.createElement("button");
-      delBtn.type = "button";
-      delBtn.className = "plan-event-del";
-      delBtn.setAttribute("aria-label", "Remove event");
-      delBtn.textContent = "×";
-      delBtn.addEventListener("click", () => {
-        day.events = day.events.filter((e) => e.id !== ev.id);
-        persistPlan();
-        renderPlan();
-      });
-      evEl.append(delBtn);
-      eventsList.append(evEl);
-    });
-    dayEl.append(eventsList);
-
-    const form = document.createElement("div");
-    form.className = "plan-add-form";
-    const titleField = document.createElement("input");
-    titleField.type = "text";
-    titleField.placeholder = "New event…";
-    const startField = document.createElement("input");
-    startField.type = "time";
-    const endField = document.createElement("input");
-    endField.type = "time";
-    const startLabel = document.createElement("label");
-    startLabel.append("From", startField);
-    const endLabel = document.createElement("label");
-    endLabel.append("To", endField);
-    const addBtn = document.createElement("button");
-    addBtn.type = "button";
-    addBtn.className = "button primary";
-    addBtn.textContent = "Add";
-    const addEvent = () => {
-      const title = titleField.value.trim();
-      if (!title) { titleField.focus(); return; }
-      day.events.push({ id: makeId(), title, start: startField.value || "", end: endField.value || "" });
-      persistPlan();
-      renderPlan();
-    };
-    addBtn.addEventListener("click", addEvent);
-    titleField.addEventListener("keydown", (event) => { if (event.key === "Enter") addEvent(); });
-    form.append(titleField, startLabel, endLabel, addBtn);
-    dayEl.append(form);
-
-    columns.append(dayEl);
-  });
-
-  updatePlanPrintSizing();
+  if (document.activeElement !== planEl.title) planEl.title.value = planState.title;
+  planEl.start.value = planState.startDate;
+  planEl.scale.value = planState.scale;
+  renderPlanTray();
+  renderPlanBoard();
 }
 
-document.getElementById("planTitleInput").addEventListener("change", (event) => {
-  planState.title = event.target.value.trim() || "PLAN IT";
+function renderPlanTray() {
+  planEl.trayList.replaceChildren();
+  const ideas = planState.cards.filter((c) => c.start === null);
+  ideas.forEach((card) => planEl.trayList.append(createPostit(card, false)));
+  if (!ideas.length) {
+    const empty = document.createElement("p");
+    empty.className = "plan-tray-empty";
+    empty.textContent = "Drop cards here to park ideas that are not scheduled yet.";
+    planEl.trayList.append(empty);
+  }
+}
+
+function renderPlanBoard() {
+  const board = planEl.board;
+  board.replaceChildren();
+  const unit = planUnitDays();
+  const colW = planColW();
+  const cols = planColumnCount();
+  const start = parseISODate(planState.startDate);
+  const today = new Date();
+  const monthFmt = new Intl.DateTimeFormat("en", { month: "short" });
+  const dayFmt = new Intl.DateTimeFormat("en", { weekday: "short" });
+
+  board.style.setProperty("--col-w", `${colW}px`);
+  board.style.width = `${cols * colW}px`;
+
+  const scale = document.createElement("div");
+  scale.className = "plan-scale";
+  const monthStarts = [];
+  for (let i = 0; i < cols; i += 1) {
+    const date = planAddDays(start, i * unit);
+    const head = document.createElement("div");
+    head.className = "plan-col-head";
+    const isMonthStart = unit === 1 ? date.getDate() === 1 : date.getDate() <= 7;
+    if (i > 0 && isMonthStart) { head.classList.add("month-start"); monthStarts.push(i); }
+    if (unit === 1 && (date.getDay() === 0 || date.getDay() === 6)) head.classList.add("weekend");
+    const offset = daysBetween(date, today);
+    if (offset >= 0 && offset < unit) head.classList.add("today");
+    const month = document.createElement("span");
+    month.className = "plan-col-month";
+    if (i === 0 || isMonthStart) {
+      const showYear = i === 0 || date.getMonth() === 0;
+      month.textContent = `${monthFmt.format(date)}${showYear ? ` ${date.getFullYear()}` : ""}`.toUpperCase();
+    }
+    const day = document.createElement("span");
+    day.className = "plan-col-day";
+    day.textContent = unit === 1
+      ? `${dayFmt.format(date).slice(0, 2)} ${date.getDate()}`
+      : `W${isoWeek(date)} · ${date.getDate()}/${date.getMonth() + 1}`;
+    head.append(month, day);
+    scale.append(head);
+  }
+  board.append(scale);
+
+  const canvas = document.createElement("div");
+  canvas.className = "plan-canvas";
+  canvas.id = "planCanvas";
+  const scheduled = planState.cards.filter((c) => c.start !== null);
+  const maxY = scheduled.reduce((max, c) => Math.max(max, c.y + PLAN_CARD_H), 0);
+  canvas.style.height = `${Math.max(maxY + 220, (planEl.wrap.clientHeight || 500) - 48)}px`;
+
+  if (unit === 1) {
+    for (let i = 0; i < cols; i += 1) {
+      const dow = planAddDays(start, i).getDay();
+      if (dow === 0 || dow === 6) {
+        const strip = document.createElement("div");
+        strip.className = "plan-weekend";
+        strip.style.left = `${i * colW}px`;
+        strip.style.width = `${colW}px`;
+        canvas.append(strip);
+      }
+    }
+  }
+  monthStarts.forEach((i) => {
+    const line = document.createElement("div");
+    line.className = "plan-month-line";
+    line.style.left = `${i * colW}px`;
+    canvas.append(line);
+  });
+  const todayOffset = daysBetween(start, today);
+  if (todayOffset >= 0 && todayOffset < cols * unit) {
+    const line = document.createElement("div");
+    line.className = "plan-today";
+    line.style.left = `${((todayOffset + 0.5) / unit) * colW}px`;
+    canvas.append(line);
+  }
+
+  const svgNS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(svgNS, "svg");
+  svg.classList.add("plan-links");
+  svg.id = "planLinks";
+  svg.innerHTML = '<defs><marker id="planArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z"/></marker></defs>';
+  planState.links.forEach((link) => {
+    const from = planCardById(link.from);
+    const to = planCardById(link.to);
+    if (!from || !to || from.start === null || to.start === null) return;
+    const d = planLinkPath(planCardRect(from), planCardRect(to));
+    const hit = document.createElementNS(svgNS, "path");
+    hit.setAttribute("d", d);
+    hit.setAttribute("class", "plan-link-hit");
+    const title = document.createElementNS(svgNS, "title");
+    title.textContent = "Click to remove this link";
+    hit.append(title);
+    hit.addEventListener("click", () => {
+      if (!confirm(`Remove the link "${from.title}" → "${to.title}"?`)) return;
+      planState.links = planState.links.filter((l) => l.id !== link.id);
+      persistPlan();
+      renderPlanBoard();
+    });
+    const path = document.createElementNS(svgNS, "path");
+    path.setAttribute("d", d);
+    path.setAttribute("class", "plan-link");
+    path.setAttribute("marker-end", "url(#planArrow)");
+    svg.append(hit, path);
+  });
+  canvas.append(svg);
+
+  const stepOrder = [...scheduled].sort((a, b) => a.start - b.start || a.y - b.y);
+  scheduled.forEach((card) => {
+    const rect = planCardRect(card);
+    const el = createPostit(card, true, stepOrder.indexOf(card) + 1);
+    el.style.left = `${rect.x}px`;
+    el.style.top = `${rect.y}px`;
+    el.style.width = `${rect.w}px`;
+    el.style.height = `${rect.h}px`;
+    canvas.append(el);
+  });
+
+  canvas.addEventListener("dblclick", (event) => {
+    if (event.target.closest(".postit")) return;
+    const pos = planCanvasPosition(event.clientX, event.clientY, 0, PLAN_CARD_H / 2);
+    const card = newPlanCard(pos.start, pos.y);
+    planState.cards.push(card);
+    persistPlan();
+    renderPlan();
+    openCardDialog(card, true);
+  });
+
+  board.append(canvas);
+}
+
+function planLinkPath(a, b) {
+  const x1 = a.x + a.w;
+  const y1 = a.y + a.h / 2;
+  const x2 = b.x;
+  const y2 = b.y + b.h / 2;
+  const bend = Math.max(36, Math.abs(x2 - x1) / 2);
+  return `M${x1} ${y1} C${x1 + bend} ${y1}, ${x2 - bend} ${y2}, ${x2} ${y2}`;
+}
+
+function planCanvasPosition(clientX, clientY, offX, offY) {
+  const canvas = document.getElementById("planCanvas");
+  const rect = canvas.getBoundingClientRect();
+  const unit = planUnitDays();
+  const col = Math.max(0, Math.round((clientX - offX - rect.left) / planColW()));
+  const y = Math.max(0, Math.round((clientY - offY - rect.top) / PLAN_SNAP_Y) * PLAN_SNAP_Y);
+  return { start: col * unit, y, col };
+}
+
+function newPlanCard(start = null, y = 0) {
+  const used = planState.cards.length;
+  return {
+    id: makeId(),
+    title: "New step",
+    desc: "",
+    color: PLAN_COLOR_NAMES[used % PLAN_COLOR_NAMES.length],
+    duration: planUnitDays() === 7 ? 7 : 3,
+    start,
+    y
+  };
+}
+
+function deletePlanCard(card) {
+  if (!confirm(`Delete "${card.title || "Untitled step"}"?`)) return false;
+  planState.cards = planState.cards.filter((c) => c.id !== card.id);
+  planState.links = planState.links.filter((l) => l.from !== card.id && l.to !== card.id);
   persistPlan();
   renderPlan();
+  return true;
+}
+
+/* ----- Drag & drop: move, create, stretch, link ----- */
+let planDrag = null;
+
+function startPlanDrag(event, kind, card, el) {
+  if (event.button !== undefined && event.button !== 0) return;
+  if (planDrag) return;
+  event.preventDefault();
+  event.stopPropagation();
+  const rect = el.getBoundingClientRect();
+  planDrag = {
+    kind,
+    card,
+    el,
+    isNew: el === planEl.newCard,
+    pointerId: event.pointerId,
+    x0: event.clientX,
+    y0: event.clientY,
+    offX: event.clientX - rect.left,
+    offY: event.clientY - rect.top,
+    w: rect.width,
+    h: rect.height,
+    origStart: card.start,
+    origDur: card.duration,
+    moved: false,
+    target: null
+  };
+}
+
+function clearPlanDropHints() {
+  document.querySelectorAll(".drop-target, .link-target").forEach((n) => n.classList.remove("drop-target", "link-target"));
+  document.querySelectorAll(".plan-ghost").forEach((n) => n.remove());
+}
+
+function autoScrollPlan(event) {
+  const r = planEl.wrap.getBoundingClientRect();
+  if (event.clientY < r.top || event.clientY > r.bottom) return;
+  if (event.clientX > r.right - 40) planEl.wrap.scrollLeft += 18;
+  else if (event.clientX < r.left + 30 && event.clientX > r.left) planEl.wrap.scrollLeft -= 18;
+  if (event.clientY > r.bottom - 40) planEl.wrap.scrollTop += 14;
+  else if (event.clientY < r.top + 70) planEl.wrap.scrollTop -= 14;
+}
+
+function beginPlanDragVisual(d) {
+  document.body.classList.add("plan-dragging");
+  if (d.kind === "move") {
+    d.float = createPostit(d.card, false);
+    d.float.classList.add("postit-float");
+    d.float.style.width = `${d.isNew ? 190 : d.w}px`;
+    d.float.style.height = `${d.isNew ? PLAN_CARD_H : d.h}px`;
+    document.body.append(d.float);
+    if (!d.isNew) d.el.classList.add("postit-source");
+  } else if (d.kind === "link") {
+    const svg = document.getElementById("planLinks");
+    d.temp = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    d.temp.setAttribute("class", "plan-link temp");
+    d.temp.setAttribute("marker-end", "url(#planArrow)");
+    svg.append(d.temp);
+  }
+}
+
+function planMoveDrag(event, d) {
+  clearPlanDropHints();
+  const under = document.elementFromPoint(event.clientX, event.clientY);
+  const canvas = under && under.closest("#planCanvas");
+  const tray = under && under.closest("#planTray");
+  let width = d.isNew ? 190 : d.w;
+  let height = d.isNew ? PLAN_CARD_H : d.h;
+  let offX = d.isNew ? 40 : d.offX;
+  let offY = d.isNew ? 30 : d.offY;
+  d.target = null;
+
+  if (canvas) {
+    const unit = planUnitDays();
+    const colW = planColW();
+    width = Math.max(44, (d.card.duration / unit) * colW - 6);
+    height = PLAN_CARD_H;
+    offX = Math.min(offX, width - 12);
+    offY = Math.min(offY, height - 12);
+    const pos = planCanvasPosition(event.clientX, event.clientY, offX, offY);
+    d.target = { type: "board", start: pos.start, y: pos.y };
+    const ghost = document.createElement("div");
+    ghost.className = "plan-ghost";
+    ghost.style.left = `${pos.col * colW + 3}px`;
+    ghost.style.top = `${pos.y}px`;
+    ghost.style.width = `${width}px`;
+    ghost.style.height = `${height}px`;
+    canvas.append(ghost);
+  } else if (tray) {
+    tray.classList.add("drop-target");
+    const items = [...planEl.trayList.querySelectorAll(".postit")].filter((n) => n !== d.el);
+    const before = items.find((n) => event.clientY < n.getBoundingClientRect().top + n.offsetHeight / 2);
+    d.target = { type: "tray", beforeId: before ? before.dataset.id : null };
+  }
+
+  d.float.style.width = `${width}px`;
+  d.float.style.height = `${height}px`;
+  d.float.style.left = `${event.clientX - offX}px`;
+  d.float.style.top = `${event.clientY - offY}px`;
+  autoScrollPlan(event);
+}
+
+function planResizeDrag(event, d) {
+  const unit = planUnitDays();
+  const delta = Math.round((event.clientX - d.x0) / planColW()) * unit;
+  const origEnd = d.origStart + d.origDur;
+  if (d.kind === "resize-r") {
+    d.card.duration = Math.min(3650, Math.max(1, d.origDur + delta));
+  } else {
+    const newStart = Math.min(Math.max(0, d.origStart + delta), origEnd - 1);
+    d.card.start = newStart;
+    d.card.duration = origEnd - newStart;
+  }
+  const rect = planCardRect(d.card);
+  d.el.style.left = `${rect.x}px`;
+  d.el.style.width = `${rect.w}px`;
+  d.el.querySelector(".postit-dur").textContent = formatPlanDuration(d.card.duration);
+  autoScrollPlan(event);
+}
+
+function planLinkDrag(event, d) {
+  clearPlanDropHints();
+  const canvas = document.getElementById("planCanvas");
+  const rect = canvas.getBoundingClientRect();
+  const from = planCardRect(d.card);
+  const x2 = event.clientX - rect.left;
+  const y2 = event.clientY - rect.top;
+  const x1 = from.x + from.w;
+  const y1 = from.y + from.h / 2;
+  const bend = Math.max(36, Math.abs(x2 - x1) / 2);
+  d.temp.setAttribute("d", `M${x1} ${y1} C${x1 + bend} ${y1}, ${x2 - bend} ${y2}, ${x2} ${y2}`);
+
+  const under = document.elementFromPoint(event.clientX, event.clientY);
+  const targetEl = under && under.closest("#planCanvas .postit");
+  if (targetEl && targetEl.dataset.id !== d.card.id) {
+    targetEl.classList.add("link-target");
+    d.target = { type: "card", id: targetEl.dataset.id };
+  } else if (under && under.closest("#planCanvas") && !targetEl) {
+    const pos = planCanvasPosition(event.clientX, event.clientY, 0, PLAN_CARD_H / 2);
+    d.target = { type: "new", start: pos.start, y: pos.y };
+  } else {
+    d.target = null;
+  }
+  autoScrollPlan(event);
+}
+
+function finishPlanDrag(d) {
+  if (!d.moved) {
+    if (d.isNew) {
+      planState.cards.push(d.card);
+      persistPlan();
+      renderPlan();
+      openCardDialog(d.card, true);
+    } else if (d.kind === "move") {
+      openCardDialog(d.card);
+    }
+    return;
+  }
+
+  const t = d.target;
+  if (d.kind === "move") {
+    if (!t) { renderPlan(); return; }
+    if (d.isNew) planState.cards.push(d.card);
+    if (t.type === "board") {
+      d.card.start = t.start;
+      d.card.y = t.y;
+    } else {
+      d.card.start = null;
+      planState.cards = planState.cards.filter((c) => c.id !== d.card.id);
+      const index = t.beforeId ? planState.cards.findIndex((c) => c.id === t.beforeId) : -1;
+      if (index >= 0) planState.cards.splice(index, 0, d.card);
+      else planState.cards.push(d.card);
+    }
+    persistPlan();
+    renderPlan();
+    if (d.isNew) openCardDialog(d.card, true);
+  } else if (d.kind === "link") {
+    if (t && t.type === "card") {
+      const exists = planState.links.some((l) => (l.from === d.card.id && l.to === t.id) || (l.from === t.id && l.to === d.card.id));
+      if (!exists) planState.links.push({ id: makeId(), from: d.card.id, to: t.id });
+      persistPlan();
+      renderPlanBoard();
+    } else if (t && t.type === "new") {
+      const card = newPlanCard(t.start, t.y);
+      planState.cards.push(card);
+      planState.links.push({ id: makeId(), from: d.card.id, to: card.id });
+      persistPlan();
+      renderPlan();
+      openCardDialog(card, true);
+    } else {
+      renderPlanBoard();
+    }
+  } else {
+    persistPlan();
+    renderPlan();
+  }
+}
+
+function endPlanDrag(event, cancelled) {
+  const d = planDrag;
+  if (!d || event.pointerId !== d.pointerId) return;
+  planDrag = null;
+  clearPlanDropHints();
+  document.body.classList.remove("plan-dragging");
+  if (d.float) d.float.remove();
+  if (d.el) d.el.classList.remove("postit-source");
+  if (cancelled) {
+    if (d.kind.startsWith("resize")) { d.card.start = d.origStart; d.card.duration = d.origDur; }
+    renderPlan();
+    return;
+  }
+  finishPlanDrag(d);
+}
+
+document.addEventListener("pointermove", (event) => {
+  const d = planDrag;
+  if (!d || event.pointerId !== d.pointerId) return;
+  if (!d.moved) {
+    if (Math.hypot(event.clientX - d.x0, event.clientY - d.y0) < 5) return;
+    d.moved = true;
+    beginPlanDragVisual(d);
+  }
+  event.preventDefault();
+  if (d.kind === "move") planMoveDrag(event, d);
+  else if (d.kind === "link") planLinkDrag(event, d);
+  else planResizeDrag(event, d);
+});
+document.addEventListener("pointerup", (event) => endPlanDrag(event, false));
+document.addEventListener("pointercancel", (event) => endPlanDrag(event, true));
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && planDrag) endPlanDrag({ pointerId: planDrag.pointerId }, true);
 });
 
-document.getElementById("planAddDayBtn").addEventListener("click", () => {
-  planState.days.push({ id: makeId(), label: `Day ${planState.days.length + 1}`, events: [] });
+planEl.newCard.addEventListener("pointerdown", (event) => startPlanDrag(event, "move", newPlanCard(null, 0), planEl.newCard));
+planEl.newCard.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter" && event.key !== " ") return;
+  event.preventDefault();
+  const card = newPlanCard(null, 0);
+  planState.cards.push(card);
   persistPlan();
   renderPlan();
+  openCardDialog(card, true);
 });
 
-document.getElementById("planPdfBtn").addEventListener("click", () => {
-  updatePlanPrintSizing();
-  requestAnimationFrame(() => window.print());
+/* ----- Toolbar ----- */
+planEl.title.addEventListener("change", () => {
+  planState.title = planEl.title.value.trim() || "MIND PLAN";
+  persistPlan();
 });
 
-/* ---------------- Template chooser ---------------- */
+planEl.start.addEventListener("change", () => {
+  if (!isValidISODate(planEl.start.value)) { planEl.start.value = planState.startDate; return; }
+  planState.startDate = planEl.start.value;
+  persistPlan();
+  renderPlanBoard();
+});
+
+planEl.scale.addEventListener("change", () => {
+  planState.scale = planEl.scale.value === "week" ? "week" : "day";
+  persistPlan();
+  renderPlanBoard();
+});
+
+planEl.today.addEventListener("click", () => {
+  const offset = daysBetween(parseISODate(planState.startDate), new Date());
+  planEl.wrap.scrollTo({ left: Math.max(0, (offset / planUnitDays()) * planColW() - 120), behavior: "smooth" });
+});
+
+document.getElementById("planQuickAdd").addEventListener("keydown", (event) => {
+  if (event.key !== "Enter") return;
+  event.preventDefault();
+  const input = event.target;
+  const title = input.value.trim();
+  if (!title) return;
+  const card = newPlanCard(null, 0);
+  card.title = title.slice(0, 120);
+  planState.cards.push(card);
+  input.value = "";
+  persistPlan();
+  renderPlanTray();
+});
+
+// Place all unscheduled ideas on the calendar one after another, linked as a chain of steps.
+document.getElementById("planLineUpBtn").addEventListener("click", () => {
+  const ideas = planState.cards.filter((c) => c.start === null);
+  if (!ideas.length) { showStatus("No ideas to line up — type some in the left column first."); return; }
+  const scheduled = planState.cards.filter((c) => c.start !== null);
+  const last = scheduled.reduce((best, c) => (!best || c.start + c.duration > best.start + best.duration ? c : best), null);
+  let start = last ? last.start + last.duration : Math.max(0, daysBetween(parseISODate(planState.startDate), new Date()));
+  const y = scheduled.length ? scheduled.reduce((max, c) => Math.max(max, c.y + PLAN_CARD_H), 0) + 32 : 24;
+  let previous = last;
+  ideas.forEach((card) => {
+    card.start = start;
+    card.y = y;
+    start += card.duration;
+    if (previous) planState.links.push({ id: makeId(), from: previous.id, to: card.id });
+    previous = card;
+  });
+  persistPlan();
+  renderPlan();
+  showStatus(`${ideas.length} idea${ideas.length > 1 ? "s" : ""} lined up as steps.`);
+});
+
+// Push every linked step so it starts no earlier than the end of the steps before it.
+document.getElementById("planAutoBtn").addEventListener("click", () => {
+  const byId = new Map(planState.cards.map((c) => [c.id, c]));
+  const links = planState.links.filter((l) => byId.get(l.from)?.start !== null && byId.get(l.to)?.start !== null);
+  if (!links.length) { showStatus("Link steps with the ● dot first, then Auto-schedule chains them in time."); return; }
+  let moved = 0;
+  for (let pass = 0; pass < planState.cards.length; pass += 1) {
+    let changed = false;
+    links.forEach((link) => {
+      const from = byId.get(link.from);
+      const to = byId.get(link.to);
+      const earliest = from.start + from.duration;
+      if (to.start < earliest) {
+        to.start = earliest;
+        changed = true;
+        moved += 1;
+      }
+    });
+    if (!changed) break;
+  }
+  persistPlan();
+  renderPlan();
+  showStatus(moved ? "Steps re-scheduled: each one starts after the previous one ends." : "Already in order — nothing to move.");
+});
+
+let planResizeTimer = null;
+window.addEventListener("resize", () => {
+  if (document.body.dataset.appMode !== "planificator") return;
+  clearTimeout(planResizeTimer);
+  planResizeTimer = setTimeout(renderPlanBoard, 150);
+});
+
+/* ----- Card editor ----- */
+const cardDialog = document.getElementById("cardDialog");
+const cardEl = {
+  heading: document.getElementById("cardDialogTitle"),
+  title: document.getElementById("cardTitle"),
+  desc: document.getElementById("cardDesc"),
+  duration: document.getElementById("cardDuration"),
+  unit: document.getElementById("cardUnit"),
+  start: document.getElementById("cardStart"),
+  colors: document.getElementById("cardColors")
+};
+let editingCard = null;
+let editingColor = "yellow";
+
+PLAN_COLOR_NAMES.forEach((name) => {
+  const swatch = document.createElement("button");
+  swatch.type = "button";
+  swatch.className = "card-color";
+  swatch.dataset.color = name;
+  swatch.style.setProperty("--swatch", PLAN_COLORS[name]);
+  swatch.setAttribute("aria-label", name);
+  swatch.addEventListener("click", () => {
+    editingColor = name;
+    cardEl.colors.querySelectorAll(".card-color").forEach((s) => s.setAttribute("aria-pressed", String(s.dataset.color === name)));
+  });
+  cardEl.colors.append(swatch);
+});
+
+function openCardDialog(card, isNew = false) {
+  editingCard = card;
+  editingColor = card.color;
+  cardEl.heading.textContent = isNew ? "New step" : "Edit step";
+  cardEl.title.value = card.title;
+  cardEl.desc.value = card.desc;
+  const weeks = card.duration >= 7 && card.duration % 7 === 0;
+  cardEl.unit.value = weeks ? "7" : "1";
+  cardEl.duration.value = String(weeks ? card.duration / 7 : card.duration);
+  cardEl.start.value = card.start === null ? "" : toISODate(planAddDays(parseISODate(planState.startDate), card.start));
+  cardEl.colors.querySelectorAll(".card-color").forEach((s) => s.setAttribute("aria-pressed", String(s.dataset.color === card.color)));
+  cardDialog.showModal();
+  cardEl.title.focus();
+  cardEl.title.select();
+}
+
+function saveCardDialog() {
+  const card = editingCard;
+  if (!card) return;
+  card.title = cardEl.title.value.trim().slice(0, 120) || "Untitled step";
+  card.desc = cardEl.desc.value.slice(0, 1000);
+  card.color = editingColor;
+  const amount = Math.max(1, Math.round(Number(cardEl.duration.value)) || 1);
+  card.duration = Math.min(3650, amount * Number(cardEl.unit.value));
+  if (!cardEl.start.value) {
+    card.start = null;
+  } else if (isValidISODate(cardEl.start.value)) {
+    let offset = daysBetween(parseISODate(planState.startDate), parseISODate(cardEl.start.value));
+    if (offset < 0) {
+      // Card placed before the project start: move the start earlier and keep other cards on their dates.
+      planState.startDate = cardEl.start.value;
+      planState.cards.forEach((c) => { if (c !== card && c.start !== null) c.start -= offset; });
+      offset = 0;
+    }
+    if (card.start === null) {
+      const maxY = planState.cards.reduce((max, c) => (c !== card && c.start !== null ? Math.max(max, c.y + PLAN_CARD_H) : max), 0);
+      card.y = maxY ? maxY + 24 : 24;
+    }
+    card.start = offset;
+  }
+  persistPlan();
+  cardDialog.close();
+  renderPlan();
+}
+
+document.getElementById("cardSaveBtn").addEventListener("click", saveCardDialog);
+document.getElementById("cardCancelBtn").addEventListener("click", () => cardDialog.close());
+document.getElementById("cardCloseBtn").addEventListener("click", () => cardDialog.close());
+document.getElementById("cardDeleteBtn").addEventListener("click", () => {
+  if (editingCard && deletePlanCard(editingCard)) cardDialog.close();
+});
+cardEl.title.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") { event.preventDefault(); saveCardDialog(); }
+});
+cardDialog.addEventListener("close", () => { editingCard = null; });
+
+/* ---------------- Model chooser ---------------- */
 const modeDialog = document.getElementById("modeDialog");
 const dayPickerEl = document.querySelector(".day-picker");
 
-function lockDayPicker(locked) {
+function lockDayPicker(fixedDays) {
   if (!dayPickerEl) return;
-  dayPickerEl.classList.toggle("locked", locked);
+  dayPickerEl.classList.toggle("locked", Boolean(fixedDays));
   dayPickerEl.querySelectorAll("button").forEach((button) => {
-    if (button.dataset.days !== "1") button.disabled = locked;
+    button.disabled = Boolean(fixedDays) && button.dataset.days !== String(fixedDays);
   });
 }
 
 const MODE_INFO = {
+  jma: {
+    heading: "PLAN IT · JMA Timetable",
+    subtitle: "The JMA 3-day timetable on a 15-minute grid.",
+    defaultTitle: "JMA TIMETABLE",
+    fixedDays: 3
+  },
   timetable: {
     heading: "PLAN IT · Timetable",
     subtitle: "Multi-day schedule on a 15-minute grid.",
@@ -3417,15 +4201,45 @@ const MODE_INFO = {
   oneday: {
     heading: "PLAN IT · One Day Event",
     subtitle: "Single-day event schedule on a 15-minute grid.",
-    defaultTitle: "ONE DAY EVENT"
+    defaultTitle: "ONE DAY EVENT",
+    fixedDays: 1
   },
   planificator: {
-    heading: "PLAN IT · Planificator",
-    subtitle: "Flexible day-by-day agenda.",
-    defaultTitle: "PLANIFICATOR"
+    heading: "PLAN IT · Mind Plan",
+    subtitle: "Organise project ideas into steps over time.",
+    defaultTitle: "MIND PLAN"
   }
 };
-const DEFAULT_TITLES = new Set(["", "JMA TIMETABLE", "PLAN IT", "TIMETABLE", "ONE DAY EVENT", "PLANIFICATOR"]);
+const DEFAULT_TITLES = new Set(["", "JMA TIMETABLE", "PLAN IT", "TIMETABLE", "ONE DAY EVENT", "PLANIFICATOR", "MIND PLAN"]);
+
+// Each timetable model keeps its own local data. JMA keeps the original storage key.
+const TIMETABLE_STORAGE_KEYS = {
+  jma: "jma-timetable-generator-v2",
+  timetable: "plan-it-timetable-v1",
+  oneday: "plan-it-oneday-v1"
+};
+
+function switchTimetableStorage(mode) {
+  const key = TIMETABLE_STORAGE_KEYS[mode];
+  if (!key || key === STORAGE_KEY) return;
+  STORAGE_KEY = key;
+  Object.assign(state, {
+    title: MODE_INFO[mode].defaultTitle,
+    dayCount: MODE_INFO[mode].fixedDays || 3,
+    startDate: dateToInput(new Date()),
+    rangeStart: "08:00",
+    rangeEnd: "18:00",
+    events: [],
+    selectedId: null,
+    selectedSlot: { day: 0, minutes: 8 * 60 }
+  });
+  history.length = 0;
+  loadState();
+  syncProjectInputs();
+  resetEditor({ day: 0, minutes: parseTime(state.rangeStart) });
+  render();
+  updateUndoButton();
+}
 
 function applyModeHeader(mode) {
   const info = MODE_INFO[mode] || MODE_INFO.timetable;
@@ -3448,6 +4262,7 @@ function applyModeHeader(mode) {
 }
 
 function setAppMode(mode) {
+  if (!MODE_INFO[mode]) mode = "timetable";
   document.body.dataset.appMode = mode;
   const workspace = document.getElementById("workspace");
   const planWorkspace = document.getElementById("planWorkspace");
@@ -3459,13 +4274,14 @@ function setAppMode(mode) {
   } else {
     workspace.hidden = false;
     planWorkspace.hidden = true;
-    if (mode === "oneday") {
-      const oneDayBtn = document.querySelector('[data-days="1"]');
-      if (oneDayBtn) oneDayBtn.click();
-      lockDayPicker(true);
-    } else {
-      lockDayPicker(false);
+    switchTimetableStorage(mode);
+    const fixedDays = MODE_INFO[mode].fixedDays;
+    lockDayPicker(null);
+    if (fixedDays && state.dayCount !== fixedDays) {
+      const button = document.querySelector(`[data-days="${fixedDays}"]`);
+      if (button) button.click();
     }
+    lockDayPicker(fixedDays || null);
   }
   applyModeHeader(mode);
   populateEventTypes(mode);
