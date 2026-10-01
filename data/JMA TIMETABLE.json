@@ -1,0 +1,25 @@
+{
+  "title": "JMA TIMETABLE",
+  "dayCount": 2,
+  "startDate": "2026-09-30",
+  "rangeStart": "08:00",
+  "rangeEnd": "18:00",
+  "events": [
+    {
+      "id": "65b69c75-f9e5-40b1-b2ae-61fc38444002",
+      "day": 0,
+      "start": 525,
+      "duration": 15,
+      "title": "",
+      "type": "grey",
+      "style": {
+        "background": "#c0c0c0",
+        "color": "#18202f",
+        "bold": false,
+        "italic": false,
+        "align": "center",
+        "pattern": "none"
+      }
+    }
+  ]
+}
