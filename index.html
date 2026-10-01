@@ -581,7 +581,6 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
   display: grid;
   grid-template-columns: 56px 1fr;
   grid-template-rows: 46px auto;
-  min-width: 100%;
 }
 .plan-corner {
   position: sticky;
@@ -3830,6 +3829,7 @@ function renderPlanBoard() {
   board.style.setProperty("--col-w", `${colW}px`);
   board.style.setProperty("--slot", `${PLAN_SLOT_PX}px`);
   board.style.width = `${PLAN_GUTTER_W + cols * colW}px`;
+  board.style.minWidth = days.length ? "" : "100%";
 
   const corner = document.createElement("div");
   corner.className = "plan-corner";
