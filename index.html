@@ -1312,7 +1312,7 @@ tbody tr:nth-child(4n + 1) td { border-top-color: var(--hour-line); }
 
       <ul id="cloudList" class="cloud-list"></ul>
       <p id="cloudStatus" class="status" role="status" aria-live="polite"></p>
-      <div id="turnstileContainer" style="display:none"></div>
+      <div id="turnstileContainer" style="min-height:0"></div>
     </div>
   </dialog>
 
@@ -2589,9 +2589,8 @@ function getTurnstileToken() {
         "error-callback": () => { if (turnstilePending) { turnstilePending.reject(new Error("Human verification failed.")); turnstilePending = null; } },
         "expired-callback": () => {}
       });
-    } else {
-      turnstile.execute(turnstileWidgetId);
     }
+    turnstile.execute(turnstileWidgetId);
   });
 }
 
