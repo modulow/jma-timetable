@@ -644,6 +644,10 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
   -webkit-box-orient: vertical;
 }
 .postit-dur { position: absolute; right: 12px; bottom: 4px; font-size: 11px; font-weight: 700; opacity: .55; }
+.postit.has-work { min-height: 0; }
+.postit.has-work .postit-desc { -webkit-line-clamp: 14; }
+.postit-handle.b { top: auto; right: 14px; bottom: 0; left: 14px; width: auto; height: 9px; cursor: ns-resize; }
+.postit-handle.b::after { top: auto; bottom: 3px; left: 50%; width: 26px; height: 2px; margin: 0 0 0 -13px; }
 .postit-handle { position: absolute; top: 0; bottom: 0; width: 10px; cursor: ew-resize; touch-action: none; }
 .postit-handle.l { left: 0; }
 .postit-handle.r { right: 0; }
@@ -1646,6 +1650,7 @@ body.plan-dragging, body.plan-dragging * { cursor: grabbing !important; user-sel
         <label class="field"><span>Unit</span>
           <select id="cardUnit"><option value="1">Days</option><option value="7">Weeks</option></select>
         </label>
+        <label class="field span-2"><span>Work time in hours — optional, by half hour (the post-it gets taller)</span><input id="cardHours" type="number" min="0" max="24" step="0.5" placeholder="e.g. 2.5"></label>
         <label class="field span-2"><span>Start date (empty = idea, not scheduled)</span><input id="cardStart" type="date"></label>
         <div class="field span-2"><span>Color</span><div id="cardColors" class="card-colors"></div></div>
       </div>
@@ -3427,7 +3432,8 @@ function normalizePlanData(data) {
         color: PLAN_COLORS[c.color] ? c.color : "yellow",
         duration: Math.min(3650, Math.max(1, Math.round(Number(c.duration)) || 1)),
         start,
-        y: Math.max(0, Math.round(Number(c.y)) || 0)
+        y: Math.max(0, Math.round(Number(c.y)) || 0),
+        hours: normalizePlanHours(c.hours)
       };
     });
     const ids = new Set(cards.map((c) => c.id));
@@ -3507,6 +3513,30 @@ function formatPlanDuration(days) {
   return `${days} d`;
 }
 
+const PLAN_HALF_HOUR_PX = 10;
+const PLAN_MAX_HOURS = 24;
+
+function normalizePlanHours(value) {
+  const hours = Math.round(Number(value) * 2) / 2;
+  return Number.isFinite(hours) && hours > 0 ? Math.min(PLAN_MAX_HOURS, hours) : 0;
+}
+
+function formatPlanHours(hours) {
+  if (!hours) return "";
+  if (hours < 1) return "30 min";
+  return `${Math.floor(hours)}h${hours % 1 ? "30" : ""}`;
+}
+
+function planCardLabel(card) {
+  const work = formatPlanHours(card.hours);
+  return work ? `${formatPlanDuration(card.duration)} · ⏱ ${work}` : formatPlanDuration(card.duration);
+}
+
+// Cards with a work time grow vertically in proportion to it (2 h = default height).
+function planCardHeight(card) {
+  return card.hours ? 44 + card.hours * 2 * PLAN_HALF_HOUR_PX : PLAN_CARD_H;
+}
+
 function planCardRect(card) {
   const unit = planUnitDays();
   const colW = planColW();
@@ -3514,7 +3544,7 @@ function planCardRect(card) {
     x: (card.start / unit) * colW + 3,
     y: card.y,
     w: Math.max(44, (card.duration / unit) * colW - 6),
-    h: PLAN_CARD_H
+    h: planCardHeight(card)
   };
 }
 
@@ -3534,11 +3564,11 @@ function planColumnCount() {
 
 function createPostit(card, onBoard, stepNo) {
   const el = document.createElement("div");
-  el.className = "postit";
+  el.className = card.hours ? "postit has-work" : "postit";
   el.dataset.id = card.id;
   el.tabIndex = 0;
   el.setAttribute("role", "button");
-  el.setAttribute("aria-label", `${card.title || "Untitled step"}, ${formatPlanDuration(card.duration)}`);
+  el.setAttribute("aria-label", `${card.title || "Untitled step"}, ${planCardLabel(card)}`);
   el.style.setProperty("--pi-bg", PLAN_COLORS[card.color] || PLAN_COLORS.yellow);
 
   if (stepNo) {
@@ -3559,7 +3589,7 @@ function createPostit(card, onBoard, stepNo) {
   }
   const dur = document.createElement("span");
   dur.className = "postit-dur";
-  dur.textContent = formatPlanDuration(card.duration);
+  dur.textContent = planCardLabel(card);
   el.append(dur);
 
   if (onBoard) {
@@ -3570,6 +3600,11 @@ function createPostit(card, onBoard, stepNo) {
       handle.addEventListener("pointerdown", (event) => startPlanDrag(event, side === "l" ? "resize-l" : "resize-r", card, el));
       el.append(handle);
     });
+    const bottom = document.createElement("span");
+    bottom.className = "postit-handle b";
+    bottom.title = "Pull down to set the work time (by half hour)";
+    bottom.addEventListener("pointerdown", (event) => startPlanDrag(event, "resize-b", card, el));
+    el.append(bottom);
     const dot = document.createElement("span");
     dot.className = "postit-link-dot";
     dot.title = "Drag onto another card to link — or onto empty space to create a linked card";
@@ -3658,7 +3693,7 @@ function renderPlanBoard() {
   canvas.className = "plan-canvas";
   canvas.id = "planCanvas";
   const scheduled = planState.cards.filter((c) => c.start !== null);
-  const maxY = scheduled.reduce((max, c) => Math.max(max, c.y + PLAN_CARD_H), 0);
+  const maxY = scheduled.reduce((max, c) => Math.max(max, c.y + planCardHeight(c)), 0);
   canvas.style.height = `${Math.max(maxY + 220, (planEl.wrap.clientHeight || 500) - 48)}px`;
 
   if (unit === 1) {
@@ -3819,6 +3854,7 @@ function startPlanDrag(event, kind, card, el) {
     h: rect.height,
     origStart: card.start,
     origDur: card.duration,
+    origHours: card.hours || 0,
     moved: false,
     target: null
   };
@@ -3871,7 +3907,7 @@ function planMoveDrag(event, d) {
     const unit = planUnitDays();
     const colW = planColW();
     width = Math.max(44, (d.card.duration / unit) * colW - 6);
-    height = PLAN_CARD_H;
+    height = planCardHeight(d.card);
     offX = Math.min(offX, width - 12);
     offY = Math.min(offY, height - 12);
     const pos = planCanvasPosition(event.clientX, event.clientY, offX, offY);
@@ -3898,6 +3934,16 @@ function planMoveDrag(event, d) {
 }
 
 function planResizeDrag(event, d) {
+  if (d.kind === "resize-b") {
+    const steps = Math.round((event.clientY - d.y0) / PLAN_HALF_HOUR_PX);
+    const base = d.origHours || (PLAN_CARD_H - 44) / (2 * PLAN_HALF_HOUR_PX);
+    d.card.hours = normalizePlanHours(base + steps / 2) || 0.5;
+    d.el.classList.add("has-work");
+    d.el.style.height = `${planCardHeight(d.card)}px`;
+    d.el.querySelector(".postit-dur").textContent = planCardLabel(d.card);
+    autoScrollPlan(event);
+    return;
+  }
   const unit = planUnitDays();
   const delta = Math.round((event.clientX - d.x0) / planColW()) * unit;
   const origEnd = d.origStart + d.origDur;
@@ -3911,7 +3957,7 @@ function planResizeDrag(event, d) {
   const rect = planCardRect(d.card);
   d.el.style.left = `${rect.x}px`;
   d.el.style.width = `${rect.w}px`;
-  d.el.querySelector(".postit-dur").textContent = formatPlanDuration(d.card.duration);
+  d.el.querySelector(".postit-dur").textContent = planCardLabel(d.card);
   autoScrollPlan(event);
 }
 
@@ -4002,7 +4048,7 @@ function endPlanDrag(event, cancelled) {
   if (d.float) d.float.remove();
   if (d.el) d.el.classList.remove("postit-source");
   if (cancelled) {
-    if (d.kind.startsWith("resize")) { d.card.start = d.origStart; d.card.duration = d.origDur; }
+    if (d.kind.startsWith("resize")) { d.card.start = d.origStart; d.card.duration = d.origDur; d.card.hours = d.origHours; }
     renderPlan();
     return;
   }
@@ -4094,7 +4140,7 @@ document.getElementById("planLineUpBtn").addEventListener("click", () => {
   const scheduled = planState.cards.filter((c) => c.start !== null);
   const last = scheduled.reduce((best, c) => (!best || c.start + c.duration > best.start + best.duration ? c : best), null);
   let start = last ? last.start + last.duration : Math.max(0, daysBetween(parseISODate(planState.startDate), new Date()));
-  const y = scheduled.length ? scheduled.reduce((max, c) => Math.max(max, c.y + PLAN_CARD_H), 0) + 32 : 24;
+  const y = scheduled.length ? scheduled.reduce((max, c) => Math.max(max, c.y + planCardHeight(c)), 0) + 32 : 24;
   let previous = last;
   ideas.forEach((card) => {
     card.start = start;
@@ -4148,6 +4194,7 @@ const cardEl = {
   desc: document.getElementById("cardDesc"),
   duration: document.getElementById("cardDuration"),
   unit: document.getElementById("cardUnit"),
+  hours: document.getElementById("cardHours"),
   start: document.getElementById("cardStart"),
   colors: document.getElementById("cardColors")
 };
@@ -4177,6 +4224,7 @@ function openCardDialog(card, isNew = false) {
   const weeks = card.duration >= 7 && card.duration % 7 === 0;
   cardEl.unit.value = weeks ? "7" : "1";
   cardEl.duration.value = String(weeks ? card.duration / 7 : card.duration);
+  cardEl.hours.value = card.hours ? String(card.hours) : "";
   cardEl.start.value = card.start === null ? "" : toISODate(planAddDays(parseISODate(planState.startDate), card.start));
   cardEl.colors.querySelectorAll(".card-color").forEach((s) => s.setAttribute("aria-pressed", String(s.dataset.color === card.color)));
   cardDialog.showModal();
@@ -4192,6 +4240,7 @@ function saveCardDialog() {
   card.color = editingColor;
   const amount = Math.max(1, Math.round(Number(cardEl.duration.value)) || 1);
   card.duration = Math.min(3650, amount * Number(cardEl.unit.value));
+  card.hours = normalizePlanHours(cardEl.hours.value);
   if (!cardEl.start.value) {
     card.start = null;
   } else if (isValidISODate(cardEl.start.value)) {
@@ -4203,7 +4252,7 @@ function saveCardDialog() {
       offset = 0;
     }
     if (card.start === null) {
-      const maxY = planState.cards.reduce((max, c) => (c !== card && c.start !== null ? Math.max(max, c.y + PLAN_CARD_H) : max), 0);
+      const maxY = planState.cards.reduce((max, c) => (c !== card && c.start !== null ? Math.max(max, c.y + planCardHeight(c)) : max), 0);
       card.y = maxY ? maxY + 24 : 24;
     }
     card.start = offset;
