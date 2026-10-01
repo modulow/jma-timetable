@@ -645,7 +645,9 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
 .plan-col-head.flash { animation: planFlash 1.2s ease-out; }
 @keyframes planFlash { 0%, 40% { background: #fff3a3; } 100% { background: transparent; } }
 .plan-col-today { position: absolute; top: 0; bottom: 0; width: var(--col-w); background: rgba(229,72,77,.05); pointer-events: none; }
-.plan-board-empty { position: absolute; top: 40px; left: 24px; right: 24px; margin: 0; font-size: 15px; color: var(--muted); }
+.plan-board.is-empty { display: block; }
+.plan-board-wrap:has(.plan-board.is-empty) { height: auto; min-height: 0; }
+.plan-board-empty { margin: 0; padding: 40px 24px; font-size: 15px; color: var(--muted); }
 .plan-picker { display: flex; flex-direction: column; gap: 6px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
 .plan-picker-nav { display: flex; align-items: center; justify-content: space-between; font-size: 11px; letter-spacing: .1em; }
 .plan-picker-nav button { width: 28px; height: 28px; border: 1px solid var(--line); background: var(--field); color: var(--ink); cursor: pointer; }
@@ -3828,8 +3830,17 @@ function renderPlanBoard() {
 
   board.style.setProperty("--col-w", `${colW}px`);
   board.style.setProperty("--slot", `${PLAN_SLOT_PX}px`);
+  board.classList.toggle("is-empty", !days.length);
+  if (!days.length) {
+    // No step on the calendar: show no grid at all, only a hint.
+    board.style.width = "";
+    const empty = document.createElement("p");
+    empty.className = "plan-board-empty";
+    empty.textContent = "No step yet. Pick a day in the calendar on the left to add the first step.";
+    board.append(empty);
+    return;
+  }
   board.style.width = `${PLAN_GUTTER_W + cols * colW}px`;
-  board.style.minWidth = days.length ? "" : "100%";
 
   const corner = document.createElement("div");
   corner.className = "plan-corner";
@@ -3884,12 +3895,6 @@ function renderPlanBoard() {
   const scheduled = planState.cards.filter((c) => c.start !== null);
   canvas.style.height = `${PLAN_SLOTS * PLAN_SLOT_PX}px`;
 
-  if (!days.length) {
-    const empty = document.createElement("p");
-    empty.className = "plan-board-empty";
-    empty.textContent = "No step yet. Pick a day in the calendar on the left to add a step, or drop an idea here.";
-    canvas.append(empty);
-  }
   days.forEach((offset, index) => {
     if (index > 0 && offset - days[index - 1] > 1) {
       const sep = document.createElement("div");
