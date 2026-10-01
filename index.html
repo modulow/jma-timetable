@@ -520,20 +520,25 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
   color: var(--ink);
 }
 .plan-help { margin: 0; padding: 0 32px 12px; font-size: 13px; color: var(--muted); }
-.plan-body { display: flex; gap: 16px; align-items: stretch; align-self: stretch; min-width: 0; padding: 0 32px 24px; }
+.plan-body { display: flex; gap: 16px; align-items: flex-start; align-self: stretch; min-width: 0; padding: 0 32px 24px; }
 .plan-tray {
+  position: sticky;
+  top: 8px;
+  z-index: 9;
   display: flex;
   flex: 0 0 210px;
   flex-direction: column;
   gap: 12px;
   height: calc(100vh - 230px);
+  max-height: calc(100vh - 16px);
   min-height: 420px;
   overflow-y: auto;
-  padding: 14px;
+  padding: 0 14px 14px;
   border: 1px dashed var(--faint);
   border-radius: 2px;
   background: var(--panel);
 }
+.plan-tray > .plan-picker { position: sticky; top: 0; z-index: 2; margin: 0 -14px; padding: 14px 14px 10px; background: var(--panel); }
 .plan-tray h3 { margin: 6px 0 0; font-size: 11px; letter-spacing: .14em; color: var(--muted); }
 .plan-quick-add {
   height: 40px;
