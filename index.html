@@ -554,6 +554,29 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
 }
 .plan-tray > * { min-width: 180px; }
 #planDrawerBtn[aria-expanded="true"] { background: var(--ink); color: var(--panel); }
+.plan-drawer-handle {
+  position: sticky;
+  top: 8px;
+  z-index: 9;
+  display: flex;
+  flex: 0 0 30px;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  align-self: flex-start;
+  min-height: 220px;
+  margin-right: 8px;
+  padding: 10px 0;
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--panel);
+  font-family: inherit;
+  cursor: pointer;
+}
+.plan-drawer-handle .arrow { font-size: 20px; font-weight: 800; line-height: 1; transition: transform .3s ease; }
+.plan-drawer-handle .label { writing-mode: vertical-rl; transform: rotate(180deg); font-size: 11px; font-weight: 800; letter-spacing: .14em; }
+.plan-body.drawer-open .plan-drawer-handle .arrow { transform: rotate(180deg); }
+.plan-drawer-handle:hover { opacity: .85; }
 .plan-tray > .plan-picker { position: sticky; top: 0; z-index: 2; margin: 0 -14px; padding: 14px 14px 10px; background: var(--panel); }
 .plan-tray h3 { margin: 6px 0 0; font-size: 11px; letter-spacing: .14em; color: var(--muted); }
 .plan-quick-add {
@@ -1644,6 +1667,7 @@ body.plan-dragging, body.plan-dragging * { cursor: grabbing !important; user-sel
           <h3>IDEAS · NOT SCHEDULED</h3>
           <div id="planTrayList" class="plan-tray-list"></div>
         </aside>
+        <button id="planDrawerHandle" class="plan-drawer-handle" type="button" aria-controls="planTray" title="Open / close the drawer: calendar and unscheduled ideas"><span class="arrow">›</span><span class="label">IDEAS &amp; CALENDAR</span></button>
         <div id="planBoardWrap" class="plan-board-wrap">
           <div id="planBoard" class="plan-board"></div>
         </div>
@@ -3872,10 +3896,14 @@ function setPlanDrawer(open) {
   document.querySelector(".plan-body").classList.toggle("drawer-open", open);
   const button = document.getElementById("planDrawerBtn");
   button.setAttribute("aria-expanded", String(open));
+  document.getElementById("planDrawerHandle").setAttribute("aria-expanded", String(open));
   planEl.tray.inert = !open;
   try { localStorage.setItem(PLAN_DRAWER_KEY, open ? "1" : "0"); } catch { /* storage unavailable */ }
 }
 document.getElementById("planDrawerBtn").addEventListener("click", () => {
+  setPlanDrawer(!document.querySelector(".plan-body").classList.contains("drawer-open"));
+});
+document.getElementById("planDrawerHandle").addEventListener("click", () => {
   setPlanDrawer(!document.querySelector(".plan-body").classList.contains("drawer-open"));
 });
 try { setPlanDrawer(localStorage.getItem(PLAN_DRAWER_KEY) === "1"); } catch { setPlanDrawer(false); }
