@@ -3580,12 +3580,11 @@ function planCardRect(card) {
   const days = planDays();
   const colW = planColW();
   const index = Math.max(0, days.indexOf(card.start));
-  // A multi-day card stretches over the open day columns it covers.
-  const span = Math.max(1, days.filter((d) => d >= card.start && d < card.start + card.duration).length);
+  // Cards always keep a one-column width; the duration is shown on the label only.
   return {
     x: index * colW + 8,
     y: card.y,
-    w: span * colW - 16,
+    w: colW - 16,
     h: planCardHeight(card)
   };
 }
@@ -3628,11 +3627,6 @@ function createPostit(card, onBoard, stepNo) {
   el.append(dur);
 
   if (onBoard) {
-    const handle = document.createElement("span");
-    handle.className = "postit-handle r";
-    handle.title = "Stretch to change the duration (in days)";
-    handle.addEventListener("pointerdown", (event) => startPlanDrag(event, "resize-r", card, el));
-    el.append(handle);
     const bottom = document.createElement("span");
     bottom.className = "postit-handle b";
     bottom.title = "Pull down to set the work time (by half hour)";
@@ -3866,7 +3860,7 @@ function planCanvasPosition(clientX, clientY, offX, offY) {
 let planPickerMonth = null;
 let planDayDrag = null;
 
-function openPlanDay(iso) {
+function openPlanDay(iso, withNewCard = false) {
   if (!isValidISODate(iso)) return;
   let offset = daysBetween(parseISODate(planState.startDate), parseISODate(iso));
   if (offset < 0) {
@@ -3877,8 +3871,15 @@ function openPlanDay(iso) {
     offset = 0;
   }
   if (!planDays().includes(offset)) planState.openDays = [...(planState.openDays || []), offset];
+  let newCard = null;
+  if (withNewCard) {
+    const maxY = planState.cards.reduce((max, c) => (c.start === offset ? Math.max(max, c.y + planCardHeight(c)) : max), 0);
+    newCard = newPlanCard(offset, maxY ? maxY + 16 : 24);
+    planState.cards.push(newCard);
+  }
   persistPlan();
   renderPlan();
+  if (newCard) openCardDialog(newCard, true);
   const index = planDays().indexOf(offset);
   planEl.wrap.scrollTo({ left: Math.max(0, index * planColW() - 40), behavior: "smooth" });
   const head = planEl.board.querySelector(`.plan-col-head[data-day="${offset}"]`);
@@ -3946,7 +3947,7 @@ function renderPlanPicker() {
       cell.dataset.count = String(count);
     }
     cell.title = `${date.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}${count ? ` · ${count} card${count > 1 ? "s" : ""}` : ""} — click to open`;
-    cell.addEventListener("click", () => openPlanDay(iso));
+    cell.addEventListener("click", () => openPlanDay(iso, true));
     grid.append(cell);
   }
   picker.append(grid);
@@ -4380,6 +4381,7 @@ const cardEl = {
   colors: document.getElementById("cardColors")
 };
 let editingCard = null;
+let editingCardIsNew = false;
 let editingColor = "yellow";
 
 PLAN_COLOR_NAMES.forEach((name) => {
@@ -4398,6 +4400,7 @@ PLAN_COLOR_NAMES.forEach((name) => {
 
 function openCardDialog(card, isNew = false) {
   editingCard = card;
+  editingCardIsNew = isNew;
   editingColor = card.color;
   cardEl.heading.textContent = isNew ? "New step" : "Edit step";
   cardEl.title.value = card.title;
@@ -4440,6 +4443,7 @@ function saveCardDialog() {
     card.start = offset;
   }
   persistPlan();
+  editingCardIsNew = false;
   cardDialog.close();
   renderPlan();
 }
@@ -4453,7 +4457,17 @@ document.getElementById("cardDeleteBtn").addEventListener("click", () => {
 cardEl.title.addEventListener("keydown", (event) => {
   if (event.key === "Enter") { event.preventDefault(); saveCardDialog(); }
 });
-cardDialog.addEventListener("close", () => { editingCard = null; });
+cardDialog.addEventListener("close", () => {
+  // A new step that was never saved is discarded.
+  if (editingCard && editingCardIsNew && planState.cards.includes(editingCard)) {
+    planState.cards = planState.cards.filter((c) => c !== editingCard);
+    planState.links = planState.links.filter((l) => l.from !== editingCard.id && l.to !== editingCard.id);
+    persistPlan();
+    renderPlan();
+  }
+  editingCard = null;
+  editingCardIsNew = false;
+});
 
 /* ---------------- Model chooser ---------------- */
 const modeDialog = document.getElementById("modeDialog");
