@@ -2585,6 +2585,7 @@ function getTurnstileToken() {
       turnstileWidgetId = turnstile.render("#turnstileContainer", {
         sitekey: TURNSTILE_SITE_KEY,
         execution: "execute",
+        appearance: "interaction-only",
         callback: (token) => { if (turnstilePending) { turnstilePending.resolve(token); turnstilePending = null; } },
         "error-callback": () => { if (turnstilePending) { turnstilePending.reject(new Error("Human verification failed.")); turnstilePending = null; } },
         "expired-callback": () => {}
@@ -2656,7 +2657,7 @@ async function refreshCloudList() {
 async function saveToCloud() {
   const name = cloudEl.saveName.value.trim() || state.title || "planning";
   try {
-    setCloudStatus("Verifying…");
+    setCloudStatus("Verifying you are a human…");
     const turnstileToken = await getTurnstileToken();
     persist();
     await cloudRequest("/api/save", {
@@ -2685,7 +2686,7 @@ async function loadFromCloud(name) {
 async function deleteFromCloud(name) {
   if (!confirm(`Delete "${name}" from the shared library for everyone?`)) return;
   try {
-    setCloudStatus("Verifying…");
+    setCloudStatus("Verifying you are a human…");
     const turnstileToken = await getTurnstileToken();
     await cloudRequest(`/api/delete?name=${encodeURIComponent(name)}&turnstileToken=${encodeURIComponent(turnstileToken)}`, { method: "DELETE" });
     setCloudStatus("Deleted.");
