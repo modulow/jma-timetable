@@ -546,7 +546,7 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
   flex-basis: 210px;
   margin-right: 16px;
   overflow-y: auto;
-  padding: 0 14px 14px;
+  padding: 14px 14px 14px;
   border-width: 1px;
   opacity: 1;
   visibility: visible;
@@ -578,6 +578,7 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
 .plan-body.drawer-open .plan-drawer-handle .arrow { transform: rotate(180deg); }
 .plan-drawer-handle:hover { opacity: .85; }
 .plan-tray > .plan-picker { position: sticky; top: 0; z-index: 2; margin: 0 -14px; padding: 14px 14px 10px; background: var(--panel); }
+.plan-tray > .plan-picker[hidden] { display: none; }
 .plan-tray h3 { margin: 6px 0 0; font-size: 11px; letter-spacing: .14em; color: var(--muted); }
 .plan-quick-add {
   height: 40px;
@@ -1648,7 +1649,7 @@ body.plan-dragging, body.plan-dragging * { cursor: grabbing !important; user-sel
 
     <section id="planWorkspace" class="workspace plan-workspace" hidden>
       <div class="plan-toolbar">
-        <button id="planDrawerBtn" class="button secondary" type="button" aria-controls="planTray" aria-expanded="false" title="Show or hide the drawer with the calendar and the unscheduled ideas">☰ Ideas &amp; calendar</button>
+        <button id="planDrawerBtn" class="button secondary" type="button" aria-controls="planTray" aria-expanded="false" title="Show or hide the drawer with the unscheduled ideas">☰ Ideas</button>
         <button id="planNewBtn" class="button secondary" type="button" title="Start a new empty plan">New</button>
         <button id="planUndoBtn" class="button secondary" type="button" title="Undo the last change (Ctrl+Z)" disabled>↶ Undo</button>
         <input id="planTitleInput" type="text" value="MIND PLAN" maxlength="80" aria-label="Plan title">
@@ -1658,16 +1659,16 @@ body.plan-dragging, body.plan-dragging * { cursor: grabbing !important; user-sel
         <button id="planLineUpBtn" class="button secondary" type="button" title="Place every idea from the drawer on the calendar, one after the other, linked as steps">Line up ideas as steps</button>
         <button id="planAutoBtn" class="button primary" type="button" title="Each linked step starts when the previous one ends">Auto-schedule</button>
       </div>
-      <p class="plan-help">Click + to add a step on a day · only days with steps are shown · click the grey ⋯ band between two days to add a step on a hidden day · open “Ideas &amp; calendar” to park ideas and drag them onto a day · drag a card to another day · drag a day header onto another to swap the days · pull the bottom edge to set the work time · drag the ● dot onto another card to link steps · click a card to edit it.</p>
+      <p class="plan-help">Click + to add a step on a day · only days with steps are shown · click the grey ⋯ band between two days to add a step on a hidden day · open “Ideas” to park ideas and drag them onto a day · drag a card to another day · drag a day header onto another to swap the days · pull the bottom edge to set the work time · drag the ● dot onto another card to link steps · click a card to edit it.</p>
       <div class="plan-body">
         <aside id="planTray" class="plan-tray" aria-label="Ideas">
-          <div id="planPicker" class="plan-picker" aria-label="Calendar: pick a day to add a step on it"></div>
+          <div id="planPicker" class="plan-picker" hidden></div>
           <input id="planQuickAdd" class="plan-quick-add" type="text" maxlength="120" placeholder="Type an idea + Enter" aria-label="Quick add idea">
           <div id="planNewCard" class="plan-new" role="button" tabindex="0">+ New post-it</div>
           <h3>IDEAS · NOT SCHEDULED</h3>
           <div id="planTrayList" class="plan-tray-list"></div>
         </aside>
-        <button id="planDrawerHandle" class="plan-drawer-handle" type="button" aria-controls="planTray" title="Open / close the drawer: calendar and unscheduled ideas"><span class="arrow">›</span><span class="label">IDEAS &amp; CALENDAR</span></button>
+        <button id="planDrawerHandle" class="plan-drawer-handle" type="button" aria-controls="planTray" title="Open / close the drawer: unscheduled ideas"><span class="arrow">›</span><span class="label">IDEAS</span></button>
         <div id="planBoardWrap" class="plan-board-wrap">
           <div id="planBoard" class="plan-board"></div>
         </div>
@@ -4235,7 +4236,7 @@ function openPlanDay(iso) {
 
 function renderPlanPicker() {
   const picker = document.getElementById("planPicker");
-  if (!picker) return;
+  if (!picker || picker.hidden) return;
   const start = parseISODate(planState.startDate);
   if (!planPickerMonth) planPickerMonth = new Date(start.getFullYear(), start.getMonth(), 1);
   const month = planPickerMonth;
