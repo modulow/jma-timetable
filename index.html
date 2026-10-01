@@ -2866,6 +2866,8 @@ function getTurnstileToken() {
         "error-callback": () => { if (turnstilePending) { turnstilePending.reject(new Error("Human verification failed.")); turnstilePending = null; } },
         "expired-callback": () => {}
       });
+    } else {
+      turnstile.reset(turnstileWidgetId);
     }
     turnstile.execute(turnstileWidgetId);
   });
