@@ -712,6 +712,7 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
 }
 .plan-col-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; margin-left: -4px; }
 .plan-col-wd { flex: 0 0 auto; margin-left: -6px; font-size: 30px; font-weight: 900; line-height: 1; letter-spacing: -.04em; color: var(--ink); }
+.plan-col-head:not(.today) .plan-col-num { min-width: 0; padding-right: 0; }
 .plan-col-head.today .plan-col-wd { color: #fc4f00; }
 .plan-col-head.today .plan-col-num { background: #fc4f00; color: #fff; box-shadow: 0 6px 14px -6px rgba(252,79,0,.7); }
 .plan-col-head:first-child { border-left: 0; }
@@ -4893,6 +4894,32 @@ function planResizeDrag(event, d) {
   const x2 = planDayX(days, planCardEnd(d.card)) + planColW();
   d.el.style.left = `${x1 + 8}px`;
   d.el.style.width = `${Math.max(20, x2 - x1 - 16)}px`;
+
+  // Over a "⋯" separator: on release, a calendar picks the hidden day for the new end (or start).
+  clearPlanDropHints();
+  d.target = null;
+  const gap = document.elementsFromPoint(event.clientX, event.clientY).find((n) => n.matches(".plan-gap"));
+  if (gap && gap.dataset.min) {
+    const firstHidden = daysBetween(parseISODate(planState.startDate), parseISODate(gap.dataset.min));
+    const ok = d.kind === "resize-r" ? firstHidden > d.origStart : firstHidden < origEnd;
+    if (ok) {
+      gap.classList.add("drop-target");
+      document.querySelectorAll(`.plan-gap-veil[data-min="${gap.dataset.min}"]`).forEach((n) => n.classList.add("drop-target"));
+      d.target = { type: "gap", min: gap.dataset.min, max: gap.dataset.max, clientX: event.clientX, clientY: event.clientY };
+      const gapRect = gap.getBoundingClientRect();
+      const canvasLeft = document.getElementById("planCanvas").getBoundingClientRect().left;
+      if (d.kind === "resize-r") {
+        const left = planDayX(days, d.origStart) + 8;
+        d.el.style.left = `${left}px`;
+        d.el.style.width = `${Math.max(20, gapRect.right - canvasLeft - left)}px`;
+      } else {
+        const right = planDayX(days, planCardEnd({ start: d.origStart, duration: d.origDur })) + planColW() - 8;
+        const left = gapRect.left - canvasLeft;
+        d.el.style.left = `${left}px`;
+        d.el.style.width = `${Math.max(20, right - left)}px`;
+      }
+    }
+  }
   refreshPostitLabels(d.el, d.card);
   autoScrollPlan(event);
 }
@@ -4940,6 +4967,25 @@ function finishPlanDrag(d) {
   if (d.kind === "move" && t && (t.type === "gap" || t.type === "add")) {
     renderPlan();
     openPlanDayChooser({ clientX: t.clientX, clientY: t.clientY }, t.min, t.max, (iso) => placePlanCardOnDay(d, t, iso));
+    return;
+  }
+  if ((d.kind === "resize-r" || d.kind === "resize-l") && t && t.type === "gap") {
+    // Restore the card, then let the user pick the hidden day that becomes its end (or start).
+    d.card.start = d.origStart;
+    d.card.duration = d.origDur;
+    renderPlan();
+    openPlanDayChooser({ clientX: t.clientX, clientY: t.clientY }, t.min, t.max, (iso) => {
+      const day = daysBetween(parseISODate(planState.startDate), parseISODate(iso));
+      const origEnd = d.origStart + d.origDur;
+      if (d.kind === "resize-r") {
+        d.card.duration = Math.max(1, day - d.card.start + 1);
+      } else {
+        d.card.start = Math.min(day, origEnd - 1);
+        d.card.duration = origEnd - d.card.start;
+      }
+      persistPlan();
+      renderPlan();
+    });
     return;
   }
   if (d.kind === "move") {
