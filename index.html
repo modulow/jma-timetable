@@ -3945,6 +3945,35 @@ function planColX(days, index) {
   return index * planColW() + gaps * PLAN_GAP_W;
 }
 
+// Day under a canvas x: a visible column, or extra days before the first / after the last column.
+function planDayAtX(days, px) {
+  const colW = planColW();
+  if (!days.length) return Math.max(0, Math.floor(px / colW));
+  const last = days.length - 1;
+  const lastRight = planColX(days, last) + colW;
+  if (px > lastRight) return days[last] + Math.round((px - lastRight) / colW);
+  if (px < 0) return Math.max(0, days[0] - Math.round(-px / colW));
+  let best = 0;
+  let bestDist = Infinity;
+  days.forEach((_, i) => {
+    const left = planColX(days, i);
+    const dist = px < left ? left - px : px > left + colW ? px - left - colW : 0;
+    if (dist < bestDist) { bestDist = dist; best = i; }
+  });
+  return days[best];
+}
+
+function planDayX(days, day) {
+  const colW = planColW();
+  if (!days.length) return day * colW;
+  const index = days.indexOf(day);
+  if (index >= 0) return planColX(days, index);
+  if (day > days[days.length - 1]) return planColX(days, days.length - 1) + (day - days[days.length - 1]) * colW;
+  if (day < days[0]) return planColX(days, 0) - (days[0] - day) * colW;
+  const before = days.filter((x) => x < day).length - 1;
+  return planColX(days, Math.max(0, before));
+}
+
 function planCardRect(card) {
   const days = planDays();
   const colW = planColW();
@@ -4750,20 +4779,23 @@ function planResizeDrag(event, d) {
     autoScrollPlan(event);
     return;
   }
-  const unit = planUnitDays();
-  const delta = Math.round((event.clientX - d.x0) / planColW()) * unit;
+  // Snap to the columns visible when the drag started, so crossing a "⋯" separator
+  // lands on the next visible day instead of revealing a hidden one.
+  const days = d.days || (d.days = planDays());
+  const px = event.clientX - document.getElementById("planCanvas").getBoundingClientRect().left;
   const origEnd = d.origStart + d.origDur;
+  const day = planDayAtX(days, px);
   if (d.kind === "resize-r") {
-    d.card.duration = Math.min(3650, Math.max(1, d.origDur + delta));
+    d.card.duration = Math.min(3650, Math.max(1, day - d.origStart + 1));
   } else {
-    const newStart = Math.min(Math.max(0, d.origStart + delta), origEnd - 1);
+    const newStart = Math.min(Math.max(0, day), origEnd - 1);
     d.card.start = newStart;
     d.card.duration = origEnd - newStart;
   }
-  const rect = planCardRect(d.card);
-  d.el.style.left = `${rect.x}px`;
-  // While stretching, preview one column per day; columns are compacted again on release.
-  d.el.style.width = `${Math.max(rect.w, Math.max(1, d.card.duration) * planColW() - 16)}px`;
+  const x1 = planDayX(days, d.card.start);
+  const x2 = planDayX(days, planCardEnd(d.card)) + planColW();
+  d.el.style.left = `${x1 + 8}px`;
+  d.el.style.width = `${Math.max(20, x2 - x1 - 16)}px`;
   refreshPostitLabels(d.el, d.card);
   autoScrollPlan(event);
 }
