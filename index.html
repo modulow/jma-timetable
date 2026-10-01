@@ -800,8 +800,16 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
   width: var(--gap-w);
   border-left: 2px solid var(--line);
   border-right: 2px solid var(--line);
-  background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--panel) 82%, transparent) 0 6px, color-mix(in srgb, var(--panel) 25%, transparent) 6px 12px);
+  background: repeating-linear-gradient(135deg, var(--sub-bg) 0 6px, var(--panel) 6px 12px);
   pointer-events: none;
+}
+.plan-gap-tint {
+  position: absolute;
+  left: -2px;
+  right: -2px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--pi-bg) 45%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--pi-bg) 70%, transparent);
 }
 .plan-gap-veil.drop-target { opacity: 0; }
 .plan-gap-n { display: block; font-size: 24px; font-weight: 900; line-height: 1; letter-spacing: -.04em; color: var(--ink); }
@@ -809,8 +817,11 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
 .plan-gap-head { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0; }
 .plan-gap-head.drop-target .plan-gap-n, .plan-gap-head.drop-target .plan-gap-unit { color: #fff; }
 .plan-gap-label {
-  position: sticky;
-  top: 12px;
+  position: absolute;
+  z-index: 1;
+  right: 0;
+  bottom: 12px;
+  left: 0;
   display: block;
   margin: 12px 2px 0;
   padding: 6px 0;
@@ -4350,7 +4361,17 @@ function renderPlanBoard() {
     veil.className = "plan-gap-veil";
     veil.style.left = `${planColX(days, index) - PLAN_GAP_W}px`;
     veil.dataset.min = iso(gapRange(index)[0]);
-    veil.innerHTML = `<span class="plan-gap-label">${gapLabel(index)}</span>`;
+    scheduled.forEach((card) => {
+      if (!(card.start <= days[index - 1] && planCardEnd(card) >= days[index])) return;
+      const rect = planCardRect(card);
+      const tint = document.createElement("span");
+      tint.className = "plan-gap-tint";
+      tint.style.top = `${rect.y}px`;
+      tint.style.height = `${rect.h}px`;
+      tint.style.setProperty("--pi-bg", PLAN_COLORS[planColorName(card.color)] || "#ffdb70");
+      veil.append(tint);
+    });
+    veil.insertAdjacentHTML("beforeend", `<span class="plan-gap-label">${gapLabel(index)}</span>`);
     canvas.append(veil);
   });
 
