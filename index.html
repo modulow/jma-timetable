@@ -568,8 +568,9 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
 .plan-tray.drop-target { border-color: var(--ink); background: var(--hover); }
 .plan-board-wrap {
   position: relative;
-  flex: 1;
+  flex: 0 1 auto;
   min-width: 0;
+  max-width: 100%;
   height: calc(100vh - 230px);
   min-height: 420px;
   overflow: auto;
@@ -646,7 +647,7 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
 @keyframes planFlash { 0%, 40% { background: #fff3a3; } 100% { background: transparent; } }
 .plan-col-today { position: absolute; top: 0; bottom: 0; width: var(--col-w); background: rgba(229,72,77,.05); pointer-events: none; }
 .plan-board.is-empty { display: block; }
-.plan-board-wrap:has(.plan-board.is-empty) { height: auto; min-height: 0; }
+.plan-board-wrap:has(.plan-board.is-empty) { flex: 1; height: auto; min-height: 0; border: 0; background: transparent; }
 .plan-board-empty { margin: 0; padding: 40px 24px; font-size: 15px; color: var(--muted); }
 .plan-picker { display: flex; flex-direction: column; gap: 6px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
 .plan-picker-nav { display: flex; align-items: center; justify-content: space-between; font-size: 11px; letter-spacing: .1em; }
