@@ -766,6 +766,39 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
 .plan-gap:hover, .plan-add-col:hover:not(:disabled) { background: var(--hover); color: var(--ink); }
 .plan-add-col:hover:not(:disabled) span { transform: scale(1.12); background: #1f6bff; color: #fff; }
 .plan-add-col:disabled { cursor: not-allowed; opacity: .4; }
+.plan-add-head.is-end, .plan-add-head.is-end:disabled {
+  opacity: 1;
+  cursor: default;
+  border-left: 6px solid var(--ink);
+  background: var(--ink);
+  color: var(--panel);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+.plan-add-head.is-end b { font-size: 22px; line-height: 1; }
+.plan-add-head.is-end small { font-size: 11px; font-weight: 900; letter-spacing: .14em; }
+.plan-add-col.is-end, .plan-add-col.is-end:disabled {
+  opacity: 1;
+  cursor: default;
+  border-left: 6px solid var(--ink);
+  background: repeating-linear-gradient(135deg, var(--ink) 0 8px, color-mix(in srgb, var(--ink) 82%, var(--panel)) 8px 16px);
+}
+.plan-add-col.is-end em {
+  position: absolute;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%) rotate(180deg);
+  writing-mode: vertical-rl;
+  font-style: normal;
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: .28em;
+  color: var(--panel);
+  white-space: nowrap;
+}
 .plan-col-line { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: color-mix(in srgb, var(--ink) 14%, transparent); pointer-events: none; }
 .plan-cal {
   position: fixed;
@@ -4277,7 +4310,11 @@ function renderPlanBoard() {
   addHead.title = "Add a step after the last day: pick a day";
   const canAdd = addRange()[0] <= addRange()[1];
   addHead.disabled = !canAdd;
-  if (!canAdd) addHead.title = "The project end is reached — move the project end date to add days";
+  if (!canAdd) {
+    addHead.title = "End of the project timeline — move the project end date to add days";
+    addHead.classList.add("is-end");
+    addHead.innerHTML = "<b>⚑</b><small>END</small>";
+  }
   addHead.addEventListener("click", (event) => openPlanDayChooser(event, ...addRange().map(iso)));
   if (canAdd) [addHead.dataset.min, addHead.dataset.max] = addRange().map(iso);
   scale.append(addHead);
@@ -4410,7 +4447,8 @@ function renderPlanBoard() {
   addCol.style.left = `${planColX(days, days.length - 1) + colW}px`;
   addCol.disabled = !canAdd;
   addCol.title = addHead.title;
-  addCol.innerHTML = "<span>+</span>";
+  addCol.innerHTML = canAdd ? "<span>+</span>" : "<em>PROJECT END</em>";
+  if (!canAdd) addCol.classList.add("is-end");
   addCol.addEventListener("click", (event) => openPlanDayChooser(event, ...addRange().map(iso)));
   if (canAdd) [addCol.dataset.min, addCol.dataset.max] = addRange().map(iso);
   canvas.append(addCol);
