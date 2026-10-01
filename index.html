@@ -766,7 +766,8 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
 .plan-gap:hover, .plan-add-col:hover:not(:disabled) { background: var(--hover); color: var(--ink); }
 .plan-add-col:hover:not(:disabled) span { transform: scale(1.12); background: #1f6bff; color: #fff; }
 .plan-add-col:disabled { cursor: not-allowed; opacity: .4; }
-.plan-add-head.is-end, .plan-add-head.is-end:disabled {
+.plan-add-head.is-end, .plan-add-head.is-end:disabled,
+.plan-add-head.is-start, .plan-add-head.is-start:disabled {
   opacity: 1;
   cursor: default;
   border-left: 6px solid var(--ink);
@@ -778,15 +779,20 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
   justify-content: center;
   gap: 2px;
 }
-.plan-add-head.is-end b { font-size: 22px; line-height: 1; }
-.plan-add-head.is-end small { font-size: 11px; font-weight: 900; letter-spacing: .14em; }
-.plan-add-col.is-end, .plan-add-col.is-end:disabled {
+.plan-add-head.is-end b, .plan-add-head.is-start b { font-size: 22px; line-height: 1; }
+.plan-add-head.is-end small, .plan-add-head.is-start small { font-size: 11px; font-weight: 900; letter-spacing: .14em; }
+.plan-lead-head { flex-basis: var(--lead-w); min-width: 0; max-width: var(--lead-w); padding: 0; overflow: hidden; border-left: 0; border-right: 2px solid var(--line); }
+.plan-add-head.is-start small { letter-spacing: .06em; }
+.plan-lead-col { width: var(--lead-w); border-left: 0; border-right: 2px solid var(--line); }
+.plan-add-head.is-start, .plan-add-head.is-start:disabled { border-left: 0; border-right: 6px solid var(--ink); }
+.plan-add-col.is-end, .plan-add-col.is-end:disabled,
+.plan-add-col.is-start, .plan-add-col.is-start:disabled {
   opacity: 1;
   cursor: default;
   border-left: 6px solid var(--ink);
   background: repeating-linear-gradient(135deg, var(--ink) 0 8px, color-mix(in srgb, var(--ink) 82%, var(--panel)) 8px 16px);
 }
-.plan-add-col.is-end em {
+.plan-add-col.is-end em, .plan-add-col.is-start em {
   position: absolute;
   top: 24px;
   left: 50%;
@@ -799,6 +805,7 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
   color: var(--panel);
   white-space: nowrap;
 }
+.plan-add-col.is-start, .plan-add-col.is-start:disabled { border-left: 0; border-right: 6px solid var(--ink); }
 .plan-col-line { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: color-mix(in srgb, var(--ink) 14%, transparent); pointer-events: none; }
 .plan-cal {
   position: fixed;
@@ -4040,11 +4047,13 @@ function planFreeY(dayOffset, exclude = null) {
   return planSnapY(bottom || PLAN_SLOT_PX * 4);
 }
 
+const PLAN_LEAD_W = 56; // "+" / project start column before the first day
+
 // Left edge of a day column: columns are colW wide, with a gap band before each non-consecutive day.
 function planColX(days, index) {
   let gaps = 0;
   for (let i = 1; i <= Math.min(index, days.length - 1); i += 1) if (days[i] - days[i - 1] > 1) gaps += 1;
-  return index * planColW() + gaps * PLAN_GAP_W;
+  return PLAN_LEAD_W + index * planColW() + gaps * PLAN_GAP_W;
 }
 
 // Day under a canvas x: a visible column, or extra days before the first / after the last column.
@@ -4054,7 +4063,7 @@ function planDayAtX(days, px) {
   const last = days.length - 1;
   const lastRight = planColX(days, last) + colW;
   if (px > lastRight) return days[last] + Math.round((px - lastRight) / colW);
-  if (px < 0) return Math.max(0, days[0] - Math.round(-px / colW));
+  if (px < planColX(days, 0)) return Math.max(0, days[0] - Math.round((planColX(days, 0) - px) / colW));
   let best = 0;
   let bestDist = Infinity;
   days.forEach((_, i) => {
@@ -4238,6 +4247,7 @@ function renderPlanBoard() {
   board.style.setProperty("--slot", `${PLAN_SLOT_PX}px`);
   board.style.setProperty("--gap-w", `${PLAN_GAP_W}px`);
   board.style.setProperty("--add-w", `${PLAN_ADD_W}px`);
+  board.style.setProperty("--lead-w", `${PLAN_LEAD_W}px`);
   board.classList.toggle("is-empty", !days.length);
   if (!days.length) {
     // No step on the calendar: show no grid at all, only a hint and the "+" button.
@@ -4265,6 +4275,23 @@ function renderPlanBoard() {
 
   const scale = document.createElement("div");
   scale.className = "plan-scale";
+  const leadRange = () => [0, days[0] - 1];
+  const canLead = days[0] > 0;
+  const leadHead = document.createElement("button");
+  leadHead.type = "button";
+  leadHead.className = "plan-add-head plan-lead-head";
+  leadHead.textContent = "+";
+  leadHead.title = "Add a step before the first day: pick a day";
+  leadHead.disabled = !canLead;
+  if (!canLead) {
+    leadHead.title = "Start of the project timeline — move the project start date to add days before";
+    leadHead.classList.add("is-start");
+    leadHead.innerHTML = "<b>⚑</b><small>START</small>";
+  } else {
+    [leadHead.dataset.min, leadHead.dataset.max] = leadRange().map(iso);
+    leadHead.addEventListener("click", (event) => openPlanDayChooser(event, ...leadRange().map(iso)));
+  }
+  scale.append(leadHead);
   days.forEach((offset, index) => {
     const date = planAddDays(start, offset);
     const count = planState.cards.filter((c) => c.start !== null && (c.start === offset || planCardEnd(c) === offset)).length;
@@ -4452,6 +4479,20 @@ function renderPlanBoard() {
   addCol.addEventListener("click", (event) => openPlanDayChooser(event, ...addRange().map(iso)));
   if (canAdd) [addCol.dataset.min, addCol.dataset.max] = addRange().map(iso);
   canvas.append(addCol);
+
+  const leadCol = document.createElement("button");
+  leadCol.type = "button";
+  leadCol.className = "plan-add-col plan-lead-col";
+  leadCol.style.left = "0px";
+  leadCol.disabled = !canLead;
+  leadCol.title = leadHead.title;
+  leadCol.innerHTML = canLead ? "<span>+</span>" : "<em>PROJECT START</em>";
+  if (!canLead) leadCol.classList.add("is-start");
+  else {
+    [leadCol.dataset.min, leadCol.dataset.max] = leadRange().map(iso);
+    leadCol.addEventListener("click", (event) => openPlanDayChooser(event, ...leadRange().map(iso)));
+  }
+  canvas.append(leadCol);
 
   canvas.addEventListener("dblclick", (event) => {
     if (event.target.closest(".postit, .plan-gap, .plan-add-col")) return;
@@ -4860,7 +4901,7 @@ function planMoveDrag(event, d) {
     document.querySelectorAll(`.plan-gap-veil[data-min="${slot.dataset.min}"]`).forEach((n) => n.classList.add("drop-target"));
     const pos = planCanvasPosition(event.clientX, event.clientY, offX, offY);
     d.target = {
-      type: slot.matches(".plan-add-col, .plan-add-head") ? "add" : "gap",
+      type: slot.matches(".plan-lead-col, .plan-lead-head") ? "gap" : slot.matches(".plan-add-col, .plan-add-head") ? "add" : "gap",
       min: slot.dataset.min,
       max: slot.dataset.max,
       y: planSnapY(pos.y, planCardHeight(d.card)),
