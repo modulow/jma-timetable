@@ -1574,6 +1574,8 @@ body.plan-dragging, body.plan-dragging * { cursor: grabbing !important; user-sel
 
     <section id="planWorkspace" class="workspace plan-workspace" hidden>
       <div class="plan-toolbar">
+        <button id="planNewBtn" class="button secondary" type="button" title="Start a new empty plan">New</button>
+        <button id="planUndoBtn" class="button secondary" type="button" title="Undo the last change (Ctrl+Z)" disabled>↶ Undo</button>
         <input id="planTitleInput" type="text" value="MIND PLAN" maxlength="80" aria-label="Plan title">
         <label>Project start <input id="planStartInput" type="date"></label>
         <label>Project end <input id="planEndInput" type="date"></label>
@@ -1733,6 +1735,7 @@ body.plan-dragging, body.plan-dragging * { cursor: grabbing !important; user-sel
       </div>
       <div class="event-actions">
         <button id="cardDeleteBtn" class="button danger" type="button">Delete</button>
+        <button id="cardCopyBtn" class="button secondary" type="button" title="Duplicate this step">Copy</button>
         <span class="action-spacer"></span>
         <button id="cardCancelBtn" class="button secondary" type="button">Cancel</button>
         <button id="cardSaveBtn" class="button primary" type="button">Save</button>
@@ -3581,10 +3584,68 @@ function loadPlanState() {
     const loaded = raw ? normalizePlanData(JSON.parse(raw)) : null;
     if (loaded) planState = loaded;
   } catch { /* storage unavailable or corrupt */ }
+  planHistory = [];
+  planLastSaved = JSON.stringify(planState);
+  updatePlanUndoButton();
+}
+
+// Undo: every persisted change keeps a snapshot of the state before it.
+const PLAN_MAX_HISTORY = 30;
+let planHistory = [];
+let planLastSaved = null;
+
+function updatePlanUndoButton() {
+  const button = document.getElementById("planUndoBtn");
+  if (button) button.disabled = !planHistory.length;
 }
 
 function persistPlan() {
-  try { localStorage.setItem(PLAN_KEY, JSON.stringify(planState)); } catch { /* storage unavailable */ }
+  const json = JSON.stringify(planState);
+  if (planLastSaved !== null && json !== planLastSaved) {
+    planHistory.push(planLastSaved);
+    if (planHistory.length > PLAN_MAX_HISTORY) planHistory.shift();
+  }
+  planLastSaved = json;
+  updatePlanUndoButton();
+  try { localStorage.setItem(PLAN_KEY, json); } catch { /* storage unavailable */ }
+}
+
+function undoPlan() {
+  if (!planHistory.length) { showStatus("Nothing to undo."); return; }
+  const previous = normalizePlanData(JSON.parse(planHistory.pop()));
+  if (!previous) return;
+  planState = previous;
+  planLastSaved = JSON.stringify(planState);
+  try { localStorage.setItem(PLAN_KEY, planLastSaved); } catch { /* storage unavailable */ }
+  updatePlanUndoButton();
+  renderPlan();
+  showStatus("Last change undone.");
+}
+
+function newPlan() {
+  if (!confirm("Start a new empty Mind Plan? (You can undo this.)")) return;
+  const monday = mondayOf(new Date());
+  planState = {
+    title: "MIND PLAN",
+    startDate: toISODate(monday),
+    endDate: toISODate(planAddDays(monday, 27)),
+    scale: "day",
+    openDays: [],
+    cards: [],
+    links: []
+  };
+  persistPlan();
+  renderPlan();
+  showStatus("New empty plan — pick a day in the calendar to add the first step.");
+}
+
+function copyPlanCard(card) {
+  const copy = { ...card, id: makeId(), title: `${card.title || "Untitled step"} (copy)`.slice(0, 120) };
+  if (copy.start !== null) copy.y = planFreeY(copy.start, copy);
+  planState.cards.push(copy);
+  persistPlan();
+  renderPlan();
+  return copy;
 }
 
 const planEl = {
@@ -4548,6 +4609,25 @@ document.getElementById("cardCloseBtn").addEventListener("click", () => cardDial
 document.getElementById("cardDeleteBtn").addEventListener("click", () => {
   if (editingCard && deletePlanCard(editingCard)) cardDialog.close();
 });
+// Copy saves the current edits, then opens the duplicate.
+document.getElementById("cardCopyBtn").addEventListener("click", () => {
+  const card = editingCard;
+  if (!card) return;
+  saveCardDialog();
+  if (!planState.cards.includes(card)) return;
+  const copy = copyPlanCard(card);
+  openCardDialog(copy);
+  showStatus("Step copied.");
+});
+document.getElementById("planUndoBtn").addEventListener("click", undoPlan);
+document.getElementById("planNewBtn").addEventListener("click", newPlan);
+document.addEventListener("keydown", (event) => {
+  if (document.body.dataset.appMode !== "planificator") return;
+  if (!(event.ctrlKey || event.metaKey) || event.shiftKey || event.key.toLowerCase() !== "z") return;
+  if (document.querySelector("dialog[open]") || event.target.closest?.("input, textarea, select")) return;
+  event.preventDefault();
+  undoPlan();
+});
 cardEl.title.addEventListener("keydown", (event) => {
   if (event.key === "Enter") { event.preventDefault(); saveCardDialog(); }
 });
@@ -4556,7 +4636,16 @@ cardDialog.addEventListener("close", () => {
   if (editingCard && editingCardIsNew && planState.cards.includes(editingCard)) {
     planState.cards = planState.cards.filter((c) => c !== editingCard);
     planState.links = planState.links.filter((l) => l.from !== editingCard.id && l.to !== editingCard.id);
-    persistPlan();
+    const json = JSON.stringify(planState);
+    if (planHistory[planHistory.length - 1] === json) {
+      // Cancelling a new step simply drops its creation from the undo history.
+      planHistory.pop();
+      planLastSaved = json;
+      try { localStorage.setItem(PLAN_KEY, json); } catch { /* storage unavailable */ }
+      updatePlanUndoButton();
+    } else {
+      persistPlan();
+    }
     renderPlan();
   }
   editingCard = null;
