@@ -481,6 +481,8 @@ tbody tr:nth-child(4n + 1) td { border-top-color: var(--hour-line); }
 .human-gate-box p { margin: 0; font-size: 15px; color: #555; }
 
 /* Mind Plan mode hides timetable-only ribbon actions */
+body[data-app-mode="planificator"] #workspace,
+#workspace[hidden], #planWorkspace[hidden] { display: none !important; }
 body[data-app-mode="planificator"] #undoBtn,
 body[data-app-mode="planificator"] #newBtn,
 body[data-app-mode="planificator"] #openBtn,
@@ -601,6 +603,9 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
 .plan-weekend { position: absolute; top: 0; bottom: 0; background: var(--sub-bg); pointer-events: none; }
 .plan-month-line { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--line); pointer-events: none; }
 .plan-today { position: absolute; top: 0; bottom: 0; width: 2px; background: #e5484d; opacity: .7; pointer-events: none; }
+.plan-after-end { position: absolute; top: 0; bottom: 0; right: 0; background: repeating-linear-gradient(135deg, rgba(0,0,0,.05) 0 8px, transparent 8px 16px); border-left: 3px solid var(--ink); pointer-events: none; }
+.plan-end-label { position: absolute; top: 6px; left: 6px; padding: 2px 8px; background: var(--ink); color: #fff; font-size: 11px; font-weight: 800; letter-spacing: .08em; white-space: nowrap; }
+.postit.late { outline: 3px solid #e5484d; outline-offset: 1px; }
 .plan-links { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
 .plan-link { fill: none; stroke: #6b6b6b; stroke-width: 2; }
 .plan-link-hit { fill: none; stroke: transparent; stroke-width: 14; pointer-events: stroke; cursor: pointer; }
@@ -1485,6 +1490,7 @@ body.plan-dragging, body.plan-dragging * { cursor: grabbing !important; user-sel
       <div class="plan-toolbar">
         <input id="planTitleInput" type="text" value="MIND PLAN" maxlength="80" aria-label="Plan title">
         <label>Project start <input id="planStartInput" type="date"></label>
+        <label>Project end <input id="planEndInput" type="date"></label>
         <label>Scale
           <select id="planScaleSelect">
             <option value="day">Days</option>
@@ -3392,6 +3398,7 @@ function defaultPlanState() {
   return {
     title: "MIND PLAN",
     startDate: toISODate(mondayOf(new Date())),
+    endDate: toISODate(planAddDays(mondayOf(new Date()), 27)),
     scale: "day",
     cards: [
       kickoff, research, interviews, design, build, test, launch,
@@ -3427,9 +3434,15 @@ function normalizePlanData(data) {
     const links = (Array.isArray(data.links) ? data.links : [])
       .filter((l) => l && ids.has(String(l.from)) && ids.has(String(l.to)) && String(l.from) !== String(l.to))
       .map((l) => ({ id: l.id ? String(l.id) : makeId(), from: String(l.from), to: String(l.to) }));
+    const startDate = isValidISODate(data.startDate) ? data.startDate : toISODate(mondayOf(new Date()));
+    const lastEnd = cards.reduce((max, c) => (c.start === null ? max : Math.max(max, c.start + c.duration)), 0);
+    const endDate = isValidISODate(data.endDate) && data.endDate >= startDate
+      ? data.endDate
+      : toISODate(planAddDays(parseISODate(startDate), Math.max(lastEnd, 28) - 1));
     return {
       title,
-      startDate: isValidISODate(data.startDate) ? data.startDate : toISODate(mondayOf(new Date())),
+      startDate,
+      endDate,
       scale: data.scale === "week" ? "week" : "day",
       cards,
       links
@@ -3453,7 +3466,9 @@ function normalizePlanData(data) {
         });
       });
     });
-    return { title, startDate: toISODate(mondayOf(new Date())), scale: "day", cards, links: [] };
+    const startDate = toISODate(mondayOf(new Date()));
+    const endDate = toISODate(planAddDays(mondayOf(new Date()), Math.max(data.days.length, 28) - 1));
+    return { title, startDate, endDate, scale: "day", cards, links: [] };
   }
   return null;
 }
@@ -3473,6 +3488,7 @@ function persistPlan() {
 const planEl = {
   title: document.getElementById("planTitleInput"),
   start: document.getElementById("planStartInput"),
+  end: document.getElementById("planEndInput"),
   scale: document.getElementById("planScaleSelect"),
   today: document.getElementById("planTodayBtn"),
   tray: document.getElementById("planTray"),
@@ -3502,9 +3518,16 @@ function planCardRect(card) {
   };
 }
 
+// Number of days from project start to the end of the project end day.
+function planEndOffset() {
+  return isValidISODate(planState.endDate)
+    ? Math.max(1, daysBetween(parseISODate(planState.startDate), parseISODate(planState.endDate)) + 1)
+    : 0;
+}
+
 function planColumnCount() {
   const unit = planUnitDays();
-  const maxEnd = planState.cards.reduce((max, c) => (c.start === null ? max : Math.max(max, c.start + c.duration)), 0);
+  const maxEnd = planState.cards.reduce((max, c) => (c.start === null ? max : Math.max(max, c.start + c.duration)), planEndOffset());
   const visible = Math.ceil((planEl.wrap.clientWidth || 900) / planColW());
   return Math.max(visible + 1, Math.ceil(maxEnd / unit) + (unit === 7 ? 6 : 14));
 }
@@ -3570,6 +3593,8 @@ function createPostit(card, onBoard, stepNo) {
 function renderPlan() {
   if (document.activeElement !== planEl.title) planEl.title.value = planState.title;
   planEl.start.value = planState.startDate;
+  planEl.end.value = planState.endDate || "";
+  planEl.end.min = planState.startDate;
   planEl.scale.value = planState.scale;
   renderPlanTray();
   renderPlanBoard();
@@ -3661,6 +3686,17 @@ function renderPlanBoard() {
     line.style.left = `${((todayOffset + 0.5) / unit) * colW}px`;
     canvas.append(line);
   }
+  const endOffset = planEndOffset();
+  if (endOffset) {
+    const after = document.createElement("div");
+    after.className = "plan-after-end";
+    after.style.left = `${(endOffset / unit) * colW}px`;
+    const label = document.createElement("span");
+    label.className = "plan-end-label";
+    label.textContent = `PROJECT END · ${parseISODate(planState.endDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`;
+    after.append(label);
+    canvas.append(after);
+  }
 
   const svgNS = "http://www.w3.org/2000/svg";
   const svg = document.createElementNS(svgNS, "svg");
@@ -3696,6 +3732,10 @@ function renderPlanBoard() {
   scheduled.forEach((card) => {
     const rect = planCardRect(card);
     const el = createPostit(card, true, stepOrder.indexOf(card) + 1);
+    if (endOffset && card.start + card.duration > endOffset) {
+      el.classList.add("late");
+      el.title = "Ends after the project end date";
+    }
     el.style.left = `${rect.x}px`;
     el.style.top = `${rect.y}px`;
     el.style.width = `${rect.w}px`;
@@ -4008,8 +4048,18 @@ planEl.title.addEventListener("change", () => {
 planEl.start.addEventListener("change", () => {
   if (!isValidISODate(planEl.start.value)) { planEl.start.value = planState.startDate; return; }
   planState.startDate = planEl.start.value;
+  if (planState.endDate && planState.endDate < planState.startDate) planState.endDate = planState.startDate;
   persistPlan();
-  renderPlanBoard();
+  renderPlan();
+});
+
+planEl.end.addEventListener("change", () => {
+  if (!isValidISODate(planEl.end.value)) { planEl.end.value = planState.endDate || ""; return; }
+  planState.endDate = planEl.end.value < planState.startDate ? planState.startDate : planEl.end.value;
+  persistPlan();
+  renderPlan();
+  const late = planState.cards.filter((c) => c.start !== null && c.start + c.duration > planEndOffset()).length;
+  if (late) showStatus(`${late} step${late > 1 ? "s" : ""} end after the project end date (red outline).`);
 });
 
 planEl.scale.addEventListener("change", () => {
