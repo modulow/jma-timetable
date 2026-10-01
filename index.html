@@ -465,6 +465,30 @@ tbody tr:nth-child(4n + 1) td { border-top-color: var(--hour-line); }
 .mode-card span { font-size: 13px; color: var(--muted); line-height: 1.4; }
 .mode-footnote { margin: 18px 0 0; font-size: 12px; color: var(--muted); }
 
+/* ---------- Human gate ---------- */
+.human-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, .92);
+}
+.human-gate[hidden] { display: none; }
+.human-gate-box { display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; color: #18202f; }
+.human-gate-box h2 { margin: 0; font-size: 28px; letter-spacing: .04em; }
+.human-gate-box p { margin: 0; font-size: 15px; color: #555; }
+
+/* Planificator mode hides timetable-only ribbon actions */
+body[data-app-mode="planificator"] #undoBtn,
+body[data-app-mode="planificator"] #newBtn,
+body[data-app-mode="planificator"] #openBtn,
+body[data-app-mode="planificator"] #saveBtn,
+body[data-app-mode="planificator"] #cloudBtn,
+body[data-app-mode="planificator"] #settingsBtn,
+body[data-app-mode="planificator"] #pdfBtn { display: none; }
+
 /* ---------- Planificator ---------- */
 .plan-workspace { display: flex; flex-direction: column; gap: 0; padding: 0; }
 .plan-toolbar {
@@ -1137,7 +1161,7 @@ tbody tr:nth-child(4n + 1) td { border-top-color: var(--hour-line); }
     -webkit-print-color-adjust: exact !important;
   }
   .app { width: 100%; margin: 0; padding: 0; }
-  .topbar, .settings-drawer, .preview-heading, .empty-message, .status, .event-dialog, .mode-dialog, .plan-toolbar { display: none !important; }
+  .topbar, .settings-drawer, .preview-heading, .empty-message, .status, .event-dialog, .mode-dialog, .human-gate, .plan-toolbar { display: none !important; }
   .app { display: block; min-height: 0; }
   .workspace, .workspace.settings-open { display: block; padding: 0; }
   .print-area { padding: 0; }
@@ -1265,8 +1289,8 @@ tbody tr:nth-child(4n + 1) td { border-top-color: var(--hour-line); }
       <div class="titlebar">
         <div class="brand">
           <span class="brand-mark" aria-hidden="true"></span>
-          <h1>PLAN IT</h1>
-          <span class="titlebar-file">Build a clear schedule for every visit, meeting and journey.</span>
+          <h1 id="appHeading">PLAN IT</h1>
+          <span id="appSubtitle" class="titlebar-file">Build a clear schedule for every visit, meeting and journey.</span>
         </div>
       </div>
     </header>
@@ -1402,6 +1426,15 @@ tbody tr:nth-child(4n + 1) td { border-top-color: var(--hour-line); }
 
     <p id="status" class="status" role="status" aria-live="polite"></p>
   </main>
+
+  <div id="humanGate" class="human-gate" role="alertdialog" aria-live="polite" aria-label="Human verification">
+    <div class="human-gate-box">
+      <h2>PLAN IT</h2>
+      <p id="humanGateText">Verifying you are a human…</p>
+      <div id="humanGateWidget"></div>
+      <button id="humanGateRetry" class="button primary" type="button" hidden>Try again</button>
+    </div>
+  </div>
 
   <dialog id="modeDialog" class="mode-dialog">
     <div class="mode-shell">
@@ -3313,6 +3346,45 @@ function lockDayPicker(locked) {
   });
 }
 
+const MODE_INFO = {
+  timetable: {
+    heading: "PLAN IT · Timetable",
+    subtitle: "Multi-day schedule on a 15-minute grid.",
+    defaultTitle: "TIMETABLE"
+  },
+  oneday: {
+    heading: "PLAN IT · One Day Event",
+    subtitle: "Single-day event schedule on a 15-minute grid.",
+    defaultTitle: "ONE DAY EVENT"
+  },
+  planificator: {
+    heading: "PLAN IT · Planificator",
+    subtitle: "Flexible day-by-day agenda.",
+    defaultTitle: "PLANIFICATOR"
+  }
+};
+const DEFAULT_TITLES = new Set(["", "JMA TIMETABLE", "PLAN IT", "TIMETABLE", "ONE DAY EVENT", "PLANIFICATOR"]);
+
+function applyModeHeader(mode) {
+  const info = MODE_INFO[mode] || MODE_INFO.timetable;
+  document.getElementById("appHeading").textContent = info.heading;
+  document.getElementById("appSubtitle").textContent = info.subtitle;
+  document.title = info.heading;
+
+  if (mode === "planificator") {
+    if (DEFAULT_TITLES.has((planState.title || "").trim().toUpperCase())) {
+      planState.title = info.defaultTitle;
+      persistPlan();
+      renderPlan();
+    }
+  } else if (DEFAULT_TITLES.has((state.title || "").trim().toUpperCase())) {
+    state.title = info.defaultTitle;
+    syncProjectInputs();
+    persist();
+    render();
+  }
+}
+
 function setAppMode(mode) {
   document.body.dataset.appMode = mode;
   const workspace = document.getElementById("workspace");
@@ -3333,6 +3405,7 @@ function setAppMode(mode) {
       lockDayPicker(false);
     }
   }
+  applyModeHeader(mode);
 }
 
 document.querySelectorAll(".mode-card").forEach((card) => {
@@ -3342,11 +3415,65 @@ document.querySelectorAll(".mode-card").forEach((card) => {
   });
 });
 
+modeDialog.addEventListener("cancel", (event) => {
+  if (!document.body.dataset.appMode) event.preventDefault();
+});
+
 document.getElementById("templateBtn").addEventListener("click", () => {
   modeDialog.showModal();
 });
 
-modeDialog.showModal();
+/* ---------------- Human verification gate on page load ---------------- */
+const humanGate = document.getElementById("humanGate");
+const humanGateText = document.getElementById("humanGateText");
+const humanGateRetry = document.getElementById("humanGateRetry");
+let humanGateWidgetId = null;
+
+function humanGatePassed() {
+  humanGate.hidden = true;
+  modeDialog.showModal();
+}
+
+function humanGateFailed(message) {
+  humanGateText.textContent = message;
+  humanGateRetry.hidden = false;
+}
+
+function waitForTurnstile(timeoutMs) {
+  return new Promise((resolve, reject) => {
+    const started = Date.now();
+    (function check() {
+      if (typeof turnstile !== "undefined") return resolve();
+      if (Date.now() - started > timeoutMs) return reject(new Error("timeout"));
+      setTimeout(check, 100);
+    })();
+  });
+}
+
+async function runHumanGate() {
+  humanGateRetry.hidden = true;
+  humanGateText.textContent = "Verifying you are a human…";
+  try {
+    await waitForTurnstile(15000);
+  } catch {
+    humanGateFailed("Verification could not load. Check your connection and try again.");
+    return;
+  }
+  if (humanGateWidgetId !== null) {
+    turnstile.reset(humanGateWidgetId);
+    return;
+  }
+  humanGateWidgetId = turnstile.render("#humanGateWidget", {
+    sitekey: TURNSTILE_SITE_KEY,
+    appearance: "interaction-only",
+    callback: () => humanGatePassed(),
+    "error-callback": () => humanGateFailed("Verification failed. Please try again."),
+    "expired-callback": () => {}
+  });
+}
+
+humanGateRetry.addEventListener("click", runHumanGate);
+runHumanGate();
 
 loadState();
 syncProjectInputs();
