@@ -588,18 +588,26 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
   background: var(--field);
   color: var(--ink);
 }
-.postit-step { font-size: 10px; font-weight: 800; letter-spacing: .12em; opacity: .55; }
+.postit-step {
+  align-self: flex-start;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, currentColor 16%, transparent);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .14em;
+}
 .plan-tray-list { display: flex; flex-direction: column; gap: 10px; min-height: 80px; }
 .plan-tray-empty { margin: 0; font-size: 12px; line-height: 1.4; color: var(--muted); }
 .plan-new {
   display: grid;
   place-items: center;
   height: 70px;
-  border-radius: 2px;
-  color: #3d3500;
-  background: #fff3a3;
-  box-shadow: 3px 3px 0 #f1dd6a, 6px 6px 0 #e4cd4c;
-  font-weight: 700;
+  border-radius: 12px;
+  color: #082b59;
+  background: #ffdb70;
+  box-shadow: 4px 4px 0 #f5b51c, 8px 8px 0 #fc4f00;
+  font-weight: 800;
   cursor: grab;
   touch-action: none;
   user-select: none;
@@ -615,13 +623,15 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
   min-height: 420px;
   overflow: auto;
   border: 1px solid var(--line);
+  border-radius: 16px;
   background: var(--panel);
+  box-shadow: 0 1px 2px rgba(8,43,89,.06), 0 18px 40px -18px rgba(8,43,89,.35);
 }
 .plan-board {
   position: relative;
   display: grid;
   grid-template-columns: 56px 1fr;
-  grid-template-rows: 46px auto;
+  grid-template-rows: 62px auto;
 }
 .plan-corner {
   position: sticky;
@@ -648,41 +658,61 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
   background: var(--panel);
 }
 .plan-hours span { position: absolute; right: 6px; padding-top: 2px; line-height: 1; white-space: nowrap; pointer-events: none; }
-.plan-hours span.hour { font-size: 12px; font-weight: 800; color: var(--ink); }
-.plan-hours span.half { font-size: 10px; color: var(--muted); }
+.plan-hours span.hour { font-size: 13px; font-weight: 900; color: var(--ink); letter-spacing: -.01em; }
+.plan-hours span.half { font-size: 10px; font-weight: 600; color: var(--muted); }
 .plan-hours span:last-child { transform: translateY(-100%); padding: 0 0 2px; }
 .plan-scale {
   position: sticky;
   top: 0;
   z-index: 6;
   display: flex;
-  height: 46px;
-  border-bottom: 1px solid var(--line);
+  height: 62px;
+  border-bottom: 2px solid var(--ink);
   background: var(--panel);
 }
 .plan-col-head {
   position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   flex: 0 0 var(--col-w);
-  padding: 6px 28px 0 12px;
+  padding: 0 28px 0 12px;
   border-left: 1px solid var(--line);
   overflow: hidden;
   white-space: nowrap;
   cursor: grab;
   user-select: none;
   touch-action: none;
+  transition: background .15s;
 }
+.plan-col-head:hover { background: var(--hover); }
+.plan-col-num {
+  flex: 0 0 auto;
+  min-width: 40px;
+  padding: 4px 6px;
+  border-radius: 10px;
+  font-size: 30px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -.04em;
+  text-align: center;
+  color: var(--ink);
+}
+.plan-col-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.plan-col-head.today .plan-col-num { background: #fc4f00; color: #fff; box-shadow: 0 6px 14px -6px rgba(252,79,0,.7); }
 .plan-col-head:first-child { border-left: 0; }
 .plan-gap-head, .plan-add-head {
   flex: 0 0 var(--gap-w);
   border: 0;
   border-left: 2px solid var(--line);
   border-right: 2px solid var(--line);
-  background: var(--sub-bg);
+  background: repeating-linear-gradient(135deg, var(--sub-bg) 0 6px, var(--panel) 6px 12px);
   color: var(--muted);
   font-family: inherit;
-  font-size: 16px;
-  font-weight: 800;
+  font-size: 18px;
+  font-weight: 900;
   cursor: pointer;
+  transition: background .15s, color .15s;
 }
 .plan-add-head { flex-basis: var(--add-w); border-right: 0; background: var(--panel); font-size: 22px; }
 .plan-gap-head:hover, .plan-add-head:hover:not(:disabled) { background: var(--hover); color: var(--ink); }
@@ -697,32 +727,47 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
   border: 0;
   border-left: 2px solid var(--line);
   border-right: 2px solid var(--line);
-  background: var(--sub-bg);
+  background: repeating-linear-gradient(135deg, var(--sub-bg) 0 6px, var(--panel) 6px 12px);
   color: var(--muted);
   cursor: pointer;
+  transition: background .15s, color .15s;
 }
-.plan-gap span, .plan-add-col span { position: absolute; top: 140px; left: 0; right: 0; display: block; font-size: 18px; font-weight: 800; }
+.plan-gap span, .plan-add-col span { position: absolute; top: 140px; left: 0; right: 0; display: block; font-size: 18px; font-weight: 900; }
 .plan-add-col { width: var(--add-w); border-right: 0; background: transparent; }
-.plan-add-col span { left: 50%; right: auto; width: 36px; height: 36px; margin-left: -18px; border: 2px dashed var(--line); border-radius: 50%; line-height: 32px; font-size: 22px; }
+.plan-add-col span {
+  left: 50%;
+  right: auto;
+  width: 40px;
+  height: 40px;
+  margin-left: -20px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--panel);
+  line-height: 40px;
+  font-size: 24px;
+  box-shadow: 0 8px 18px -8px rgba(8,43,89,.6);
+  transition: transform .15s, background .15s;
+}
 .plan-gap:hover, .plan-add-col:hover:not(:disabled) { background: var(--hover); color: var(--ink); }
+.plan-add-col:hover:not(:disabled) span { transform: scale(1.12); background: #1f6bff; color: #fff; }
 .plan-add-col:disabled { cursor: not-allowed; opacity: .4; }
 .plan-col-line { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--grid); pointer-events: none; }
 .plan-day-chooser { position: fixed; width: 1px; height: 1px; padding: 0; border: 0; opacity: 0; pointer-events: none; }
 .plan-col-close { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border: 0; background: transparent; color: var(--muted); font-size: 16px; cursor: pointer; }
 .plan-col-close:hover { color: var(--ink); background: var(--hover); }
-.plan-col-head.today { box-shadow: inset 0 -3px 0 #e5484d; }
+.plan-col-head.today { box-shadow: inset 0 -3px 0 #fc4f00; }
 .plan-col-head.after-end { background: repeating-linear-gradient(135deg, rgba(0,0,0,.05) 0 8px, transparent 8px 16px); }
 .plan-col-head.dragging { opacity: .45; }
 .plan-col-head.swap-target { background: var(--hover); box-shadow: inset 0 0 0 2px var(--ink); }
 .plan-col-head.flash { animation: planFlash 1.2s ease-out; }
-@keyframes planFlash { 0%, 40% { background: #fff3a3; } 100% { background: transparent; } }
+@keyframes planFlash { 0%, 40% { background: #ffdb70; } 100% { background: transparent; } }
 .plan-col-today { position: absolute; top: 0; bottom: 0; width: var(--col-w); background: rgba(229,72,77,.05); pointer-events: none; }
 .plan-board.is-empty { display: block; }
 .plan-board-wrap:has(.plan-board.is-empty) { flex: 1; height: auto; min-height: 0; border: 0; background: transparent; }
 .plan-board-empty { display: flex; align-items: center; gap: 16px; margin: 0; padding: 32px 24px; font-size: 15px; color: var(--muted); }
 .plan-board-empty p { margin: 0; }
-.plan-add-btn { flex: 0 0 auto; width: 48px; height: 48px; border: 2px dashed var(--line); border-radius: 50%; background: var(--panel); color: var(--ink); font-size: 26px; font-weight: 800; cursor: pointer; }
-.plan-add-btn:hover { background: var(--hover); }
+.plan-add-btn { flex: 0 0 auto; width: 52px; height: 52px; border: 0; border-radius: 50%; background: var(--ink); color: var(--panel); font-size: 28px; font-weight: 800; cursor: pointer; box-shadow: 0 10px 22px -10px rgba(8,43,89,.7); transition: transform .15s, background .15s; }
+.plan-add-btn:hover { transform: scale(1.08); background: #1f6bff; color: #fff; }
 .plan-picker { display: flex; flex-direction: column; gap: 6px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
 .plan-picker-nav { display: flex; align-items: center; justify-content: space-between; font-size: 11px; letter-spacing: .1em; }
 .plan-picker-nav button { width: 28px; height: 28px; border: 1px solid var(--line); background: var(--field); color: var(--ink); cursor: pointer; }
@@ -746,8 +791,8 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
 .plan-picker-day.open { border-color: var(--ink); }
 .plan-picker-day.has-cards { background: #fff3a3; color: #1f1f1f; font-weight: 800; }
 .plan-picker-day.has-cards::after { position: absolute; top: 1px; right: 2px; font-size: 8px; content: attr(data-count); }
-.plan-col-month { display: block; height: 16px; font-size: 11px; font-weight: 700; letter-spacing: .06em; color: var(--ink); }
-.plan-col-day { display: block; font-size: 12px; color: var(--muted); }
+.plan-col-month { display: block; font-size: 11px; font-weight: 800; letter-spacing: .1em; color: var(--ink); }
+.plan-col-day { display: block; font-size: 11px; font-weight: 600; color: var(--muted); }
 .plan-canvas {
   position: relative;
   background-image:
@@ -775,33 +820,54 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
   gap: 3px;
   min-height: 70px;
   padding: 8px 12px 18px;
-  border-radius: 2px;
-  color: #1f1f1f;
-  background: var(--pi-bg, #fff3a3);
-  box-shadow: 0 1px 2px rgba(0,0,0,.15), 0 4px 10px rgba(0,0,0,.08);
+  border-radius: 12px;
+  color: var(--pi-fg, #082b59);
+  background: var(--pi-bg, #ffdb70);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.35),
+    0 1px 2px rgba(8,43,89,.18),
+    0 10px 22px -12px color-mix(in srgb, var(--pi-bg, #ffdb70) 70%, #082b59);
   cursor: grab;
   touch-action: none;
   user-select: none;
   overflow: hidden;
-  transition: box-shadow .12s;
+  transition: box-shadow .15s, transform .15s;
 }
-.postit:hover { box-shadow: 0 2px 4px rgba(0,0,0,.2), 0 8px 18px rgba(0,0,0,.12); }
-.postit:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.postit::before {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 18px;
+  height: 18px;
+  border-bottom-left-radius: 8px;
+  background: linear-gradient(225deg, var(--panel) 50%, rgba(0,0,0,.18) 50%);
+  content: "";
+  pointer-events: none;
+}
+.postit:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.35),
+    0 2px 4px rgba(8,43,89,.2),
+    0 16px 30px -12px color-mix(in srgb, var(--pi-bg, #ffdb70) 60%, #082b59);
+}
+.postit:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
 .plan-tray .postit { position: relative; flex: none; }
-.postit-title { font-size: 13px; font-weight: 700; line-height: 1.2; overflow-wrap: anywhere; }
+.postit-title { font-size: 14px; font-weight: 800; line-height: 1.2; letter-spacing: -.01em; overflow-wrap: anywhere; }
 .postit-desc {
   display: -webkit-box;
   overflow: hidden;
   font-size: 12px;
+  font-weight: 500;
   line-height: 1.3;
-  opacity: .82;
+  opacity: .85;
   white-space: pre-line;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
 }
-.postit-dur { position: absolute; right: 12px; bottom: 4px; font-size: 11px; font-weight: 700; opacity: .55; }
+.postit-dur { position: absolute; right: 12px; bottom: 4px; font-size: 11px; font-weight: 800; opacity: .75; }
 .postit.has-work { min-height: 0; }
-.plan-canvas .postit { min-height: 0; padding: 5px 10px 16px; }
+.plan-canvas .postit { min-height: 0; padding: 6px 12px 16px; }
 .postit.has-work .postit-desc { -webkit-line-clamp: 14; }
 .postit-handle.b { top: auto; right: 14px; bottom: 0; left: 14px; width: auto; height: 9px; cursor: ns-resize; }
 .postit-handle.b::after { top: auto; bottom: 3px; left: 50%; width: 26px; height: 2px; margin: 0 0 0 -13px; }
@@ -816,11 +882,11 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
   height: 22px;
   margin-top: -11px;
   border-radius: 1px;
-  background: rgba(0,0,0,.25);
+  background: currentColor;
   content: "";
   opacity: 0;
 }
-.postit:hover .postit-handle::after { opacity: 1; }
+.postit:hover .postit-handle::after { opacity: .45; }
 .postit-link-dot {
   position: absolute;
   top: 50%;
@@ -852,11 +918,15 @@ body.plan-dragging, body.plan-dragging * { cursor: grabbing !important; user-sel
 .card-color {
   width: 34px;
   height: 34px;
-  border: 1px solid rgba(0,0,0,.2);
-  border-radius: 2px;
+  border: 0;
+  border-radius: 50%;
   background: var(--swatch);
+  box-shadow: inset 0 0 0 1px rgba(8,43,89,.15);
+  cursor: pointer;
+  transition: transform .12s;
 }
-.card-color[aria-pressed="true"] { outline: 3px solid var(--ink); outline-offset: 2px; }
+.card-color:hover { transform: scale(1.1); }
+.card-color[aria-pressed="true"] { outline: 3px solid var(--ink); outline-offset: 3px; }
 
 /* ---------- Shared library dialog ---------- */
 .cloud-dialog { width: min(520px, calc(100vw - 40px)); }
@@ -3515,16 +3585,33 @@ applyTheme(savedTheme === "dark" ? "dark" : "light");
 
 /* ---------------- Mind Plan: post-it mind map on a calendar ---------------- */
 const PLAN_KEY = "jma-planificator-v1";
+// Palette from the Learning catalogue 2027 table of contents (page 2).
 const PLAN_COLORS = {
-  yellow: "#fff3a3",
-  pink: "#ffc9de",
-  blue: "#c4e2ff",
-  green: "#cdf0c4",
-  orange: "#ffd9ad",
-  purple: "#ddd0ff",
-  grey: "#e6e6e6"
+  yellow: "#ffdb70",
+  amber: "#f5b51c",
+  orange: "#fc4f00",
+  coral: "#ff8787",
+  green: "#29db78",
+  sky: "#66e3ff",
+  cyan: "#00bdff",
+  periwinkle: "#9ebfff",
+  blue: "#1f6bff",
+  steel: "#5478ba",
+  cobalt: "#003cb4",
+  navy: "#082b59"
 };
+const PLAN_COLOR_ALIASES = { pink: "coral", purple: "steel", grey: "periwinkle" };
 const PLAN_COLOR_NAMES = Object.keys(PLAN_COLORS);
+const PLAN_INK_DARK = "#082b59";
+// Same text colours as the catalogue tiles: navy on the pale tints, white elsewhere.
+const PLAN_DARK_INK_COLORS = new Set(["#ffdb70", "#66e3ff", "#9ebfff"]);
+function planColorName(name) {
+  const resolved = PLAN_COLOR_ALIASES[name] || name;
+  return PLAN_COLORS[resolved] ? resolved : "yellow";
+}
+function planInkFor(hex) {
+  return PLAN_DARK_INK_COLORS.has(hex) ? PLAN_INK_DARK : "#ffffff";
+}
 const PLAN_COL_W = { day: 220 };
 // Vertical time axis: one row per half hour from 7:00 to 20:00.
 const PLAN_DAY_START_H = 7;
@@ -3569,12 +3656,12 @@ const isValidISODate = (str) => typeof str === "string" && /^\d{4}-\d{2}-\d{2}$/
 function defaultPlanState() {
   const card = (title, desc, start, duration, y, color) => ({ id: makeId(), title, desc, start, duration, y, color });
   const kickoff = card("Kick-off", "Goals, team, budget", 0, 2, 24, "orange");
-  const research = card("Research", "Benchmark and needs", 2, 5, 24, "blue");
-  const interviews = card("User interviews", "5 to 8 people", 3, 4, 140, "blue");
-  const design = card("Design", "Concept and mock-ups", 7, 5, 24, "purple");
+  const research = card("Research", "Benchmark and needs", 2, 5, 24, "sky");
+  const interviews = card("User interviews", "5 to 8 people", 3, 4, 140, "periwinkle");
+  const design = card("Design", "Concept and mock-ups", 7, 5, 24, "blue");
   const build = card("Build", "Develop the first version", 12, 10, 24, "green");
-  const test = card("Test", "Feedback and fixes", 22, 4, 24, "pink");
-  const launch = card("Launch", "Go live 🚀", 26, 1, 24, "yellow");
+  const test = card("Test", "Feedback and fixes", 22, 4, 24, "coral");
+  const launch = card("Launch", "Go live 🚀", 26, 1, 24, "navy");
   const link = (from, to) => ({ id: makeId(), from: from.id, to: to.id });
   return {
     title: "MIND PLAN",
@@ -3585,7 +3672,7 @@ function defaultPlanState() {
     cards: [
       kickoff, research, interviews, design, build, test, launch,
       card("Newsletter?", "Idea to explore", null, 2, 0, "yellow"),
-      card("Partner event", "Who could join?", null, 3, 0, "grey")
+      card("Partner event", "Who could join?", null, 3, 0, "cyan")
     ],
     links: [link(kickoff, research), link(research, interviews), link(research, design), link(interviews, design), link(design, build), link(build, test), link(test, launch)]
   };
@@ -3606,7 +3693,7 @@ function normalizePlanData(data) {
         id: c.id ? String(c.id) : makeId(),
         title: text(c.title, 120),
         desc: text(c.desc, 1000),
-        color: PLAN_COLORS[c.color] ? c.color : "yellow",
+        color: planColorName(c.color),
         duration: Math.min(3650, Math.max(1, Math.round(Number(c.duration)) || 1)),
         start,
         y: Math.max(0, Math.round(Number(c.y)) || 0),
@@ -3828,7 +3915,9 @@ function createPostit(card, onBoard, stepNo) {
   el.tabIndex = 0;
   el.setAttribute("role", "button");
   el.setAttribute("aria-label", `${card.title || "Untitled step"}, ${planCardLabel(card)}`);
-  el.style.setProperty("--pi-bg", PLAN_COLORS[card.color] || PLAN_COLORS.yellow);
+  const bg = PLAN_COLORS[planColorName(card.color)];
+  el.style.setProperty("--pi-bg", bg);
+  el.style.setProperty("--pi-fg", planInkFor(bg));
 
   if (stepNo) {
     const step = document.createElement("div");
@@ -3930,7 +4019,8 @@ function renderPlanBoard() {
   const todayOffset = daysBetween(start, new Date());
   const endOffset = planEndOffset();
   const cols = Math.max(1, days.length);
-  const dateFmt = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short" });
+  const weekdayFmt = new Intl.DateTimeFormat("en-GB", { weekday: "short" });
+  const monthFmt = new Intl.DateTimeFormat("en-GB", { month: "short" });
   const iso = (offset) => toISODate(planAddDays(start, offset));
   const lastAllowed = endOffset ? endOffset - 1 : 3650;
   const isGap = (index) => index > 0 && days[index] - days[index - 1] > 1;
@@ -3958,7 +4048,7 @@ function renderPlanBoard() {
     add.title = "Add a step: pick a day";
     add.addEventListener("click", (event) => openPlanDayChooser(event, ...addRange().map(iso)));
     const text = document.createElement("p");
-    text.textContent = "No step yet. Click + (or pick a day in the calendar on the left) to add the first step.";
+    text.textContent = "No step yet. Click + to pick a day and add the first step.";
     empty.append(add, text);
     board.append(empty);
     return;
@@ -3990,13 +4080,19 @@ function renderPlanBoard() {
       gapHead.addEventListener("click", (event) => openPlanDayChooser(event, ...gapRange(index).map(iso)));
       scale.append(gapHead);
     }
+    const num = document.createElement("span");
+    num.className = "plan-col-num";
+    num.textContent = String(date.getDate());
+    const text = document.createElement("span");
+    text.className = "plan-col-text";
     const label = document.createElement("span");
     label.className = "plan-col-month";
-    label.textContent = dateFmt.format(date).toUpperCase();
+    label.textContent = `${weekdayFmt.format(date)} · ${monthFmt.format(date)}${date.getFullYear() !== new Date().getFullYear() ? ` ${date.getFullYear()}` : ""}`.toUpperCase();
     const sub = document.createElement("span");
     sub.className = "plan-col-day";
-    sub.textContent = `Day ${offset + 1}${date.getFullYear() !== new Date().getFullYear() ? ` · ${date.getFullYear()}` : ""} · ${count} card${count === 1 ? "" : "s"}`;
-    head.append(label, sub);
+    sub.textContent = `Day ${offset + 1} · ${count} card${count === 1 ? "" : "s"}`;
+    text.append(label, sub);
+    head.append(num, text);
     head.addEventListener("pointerdown", (event) => startPlanDayDrag(event, offset, head));
     scale.append(head);
   });
