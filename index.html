@@ -1800,6 +1800,7 @@ body.plan-dragging, body.plan-dragging * { cursor: grabbing !important; user-sel
       <div class="plan-toolbar">
         <button id="planDrawerBtn" class="button secondary" type="button" aria-controls="planTray" aria-expanded="false" title="Show or hide the drawer with the unscheduled ideas">☰ Ideas</button>
         <button id="planNewBtn" class="button secondary" type="button" title="Start a new empty plan">New</button>
+        <button id="planExampleBtn" class="button secondary" type="button" title="Load an example: 3 weeks of a European Parliament policy adviser">Example</button>
         <button id="planUndoBtn" class="button secondary" type="button" title="Undo the last change (Ctrl+Z)" disabled>↶ Undo</button>
         <input id="planTitleInput" type="text" value="MIND PLAN" maxlength="80" aria-label="Plan title">
         <label>Project start <input id="planStartInput" type="date"></label>
@@ -3732,29 +3733,56 @@ function isoWeek(date) {
 }
 const isValidISODate = (str) => typeof str === "string" && /^\d{4}-\d{2}-\d{2}$/.test(str) && !Number.isNaN(parseISODate(str).getTime());
 
+// Example: 3 weeks of a European Parliament policy adviser working on an own-initiative report.
+// Week 1 Brussels (committee), week 2 Strasbourg (plenary), week 3 Brussels (committee vote).
 function defaultPlanState() {
-  const card = (title, desc, start, duration, y, color) => ({ id: makeId(), title, desc, start, duration, y, color });
-  const kickoff = card("Kick-off", "Goals, team, budget", 0, 2, 24, "orange");
-  const research = card("Research", "Benchmark and needs", 2, 5, 24, "sky");
-  const interviews = card("User interviews", "5 to 8 people", 3, 4, 140, "periwinkle");
-  const design = card("Design", "Concept and mock-ups", 7, 5, 24, "blue");
-  const build = card("Build", "Develop the first version", 12, 10, 24, "green");
-  const test = card("Test", "Feedback and fixes", 22, 4, 24, "coral");
-  const launch = card("Launch", "Go live 🚀", 26, 1, 24, "navy");
+  const at = (h, m = 0) => (h - PLAN_DAY_START_H) * 2 * PLAN_SLOT_PX + (m / 30) * PLAN_SLOT_PX;
+  const card = (title, desc, start, duration, y, hours, color) => ({ id: makeId(), title, desc, start, duration, y, hours, color });
+  const kickoff = card("Team kick-off", "Rapporteur's office · priorities and timeline for the report on AI in education", 0, 1, at(9), 1, "orange");
+  const draft = card("Draft working document", "Structure, key figures, first recitals and paragraphs", 0, 3, at(10, 30), 3, "sky");
+  const hearing = card("Public hearing · CULT", "Committee room ASP 1G3 · 4 external experts, Q&A with MEPs", 1, 1, at(14, 30), 2, "periwinkle");
+  const dgEac = card("Meeting DG EAC", "European Commission · state of play of the Digital Education Action Plan", 2, 1, at(15), 1, "cobalt");
+  const shadows1 = card("Shadow rapporteurs #1", "EPP, S&D, Renew, Greens, ECR, Left · first exchange of views", 3, 1, at(9), 2, "blue");
+  const translation = card("Translation of the draft", "DG TRAD · 24 languages before the amendment deadline", 4, 4, at(16), 1, "steel");
+  const travel = card("Travel to Strasbourg", "Train Brussels-Midi → Strasbourg · plenary week", 7, 1, at(7, 30), 2, "amber");
+  const group = card("Political group meeting", "Group position on the plenary agenda", 8, 1, at(9), 2, "navy");
+  const votes = card("Plenary votes", "Voting time · follow the group's voting list", 8, 1, at(12), 1, "coral");
+  const press = card("Press briefing", "With the rapporteur · Strasbourg media centre", 9, 1, at(15), 1, "yellow");
+  const compromises = card("Compromise amendments", "Merge 180 amendments into 22 compromises", 10, 1, at(9), 3, "green");
+  const back = card("Return to Brussels", "Train Strasbourg → Brussels-Midi", 11, 1, at(14), 2, "amber");
+  const advisers = card("Technical meeting", "Political advisers of all groups · finalise the compromises", 14, 1, at(10), 2, "cyan");
+  const shadows2 = card("Shadow rapporteurs #2", "Agree the compromise package before the vote", 15, 1, at(9), 2, "blue");
+  const vote = card("Committee vote · CULT", "Vote on the compromises and the draft report", 16, 1, at(15), 1, "orange");
+  const tabling = card("Tabling for plenary", "Final text, voting list and plenary request", 17, 1, at(10), 2, "steel");
+  const debrief = card("Debrief & next steps", "Lessons learned · plenary debate in 2 weeks", 18, 1, at(11), 1, "periwinkle");
   const link = (from, to) => ({ id: makeId(), from: from.id, to: to.id });
+  const monday = mondayOf(new Date());
   return {
-    title: "MIND PLAN",
-    startDate: toISODate(mondayOf(new Date())),
-    endDate: toISODate(planAddDays(mondayOf(new Date()), 27)),
+    title: "EP · REPORT ON AI IN EDUCATION",
+    startDate: toISODate(monday),
+    endDate: toISODate(planAddDays(monday, 20)),
     scale: "day",
     openDays: [],
     cards: [
-      kickoff, research, interviews, design, build, test, launch,
-      card("Newsletter?", "Idea to explore", null, 2, 0, "yellow"),
-      card("Partner event", "Who could join?", null, 3, 0, "cyan")
+      kickoff, draft, hearing, dgEac, shadows1, translation, travel, group, votes, press,
+      compromises, back, advisers, shadows2, vote, tabling, debrief,
+      card("Op-ed in Politico Europe", "Idea · after the committee vote", null, 1, 0, 1, "yellow"),
+      card("Visit a pilot school", "Idea · see AI tools used in class", null, 1, 0, 3, "green")
     ],
-    links: [link(kickoff, research), link(research, interviews), link(research, design), link(interviews, design), link(design, build), link(build, test), link(test, launch)]
+    links: [
+      link(kickoff, draft), link(draft, shadows1), link(hearing, shadows1), link(draft, translation),
+      link(translation, compromises), link(compromises, advisers), link(advisers, shadows2),
+      link(shadows2, vote), link(vote, tabling), link(tabling, debrief)
+    ]
   };
+}
+
+function loadExamplePlan() {
+  if (!confirm("Load the example plan (3 weeks at the European Parliament)? Your current plan is replaced — you can undo this.")) return;
+  planState = normalizePlanData(defaultPlanState());
+  persistPlan();
+  renderPlan();
+  showStatus("Example loaded: 3 weeks of a European Parliament policy adviser.");
 }
 
 let planState = defaultPlanState();
@@ -5208,6 +5236,7 @@ document.getElementById("cardCopyBtn").addEventListener("click", () => {
 });
 document.getElementById("planUndoBtn").addEventListener("click", undoPlan);
 document.getElementById("planNewBtn").addEventListener("click", newPlan);
+document.getElementById("planExampleBtn").addEventListener("click", loadExamplePlan);
 document.addEventListener("keydown", (event) => {
   if (document.body.dataset.appMode !== "planificator") return;
   if (!(event.ctrlKey || event.metaKey) || event.shiftKey || event.key.toLowerCase() !== "z") return;
