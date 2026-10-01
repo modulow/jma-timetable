@@ -632,8 +632,10 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
   touch-action: none;
 }
 .plan-col-head:first-child { border-left: 0; }
-.plan-col-head.gap { border-left: 3px double var(--ink); }
-.plan-col-gap { position: absolute; top: 4px; right: 6px; padding: 0 5px; border: 1px solid var(--line); font-size: 10px; font-weight: 700; color: var(--muted); }
+.plan-col-head.gap { padding-left: 16px; }
+.plan-col-head.gap::before { position: absolute; top: 0; bottom: 0; left: 0; width: 6px; background: repeating-linear-gradient(180deg, var(--ink) 0 3px, transparent 3px 6px); opacity: .45; content: ""; }
+.plan-col-gap { position: absolute; top: 4px; right: 6px; padding: 0 5px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); font-size: 10px; font-weight: 700; color: var(--muted); }
+.plan-gap-sep { position: absolute; top: 0; bottom: 0; width: 6px; margin-left: -3px; background: repeating-linear-gradient(180deg, var(--muted) 0 3px, transparent 3px 7px); opacity: .5; pointer-events: none; }
 .plan-col-head.gap .plan-col-close { top: 22px; }
 .plan-col-close { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border: 0; background: transparent; color: var(--muted); font-size: 16px; cursor: pointer; }
 .plan-col-close:hover { color: var(--ink); background: var(--hover); }
@@ -3788,8 +3790,8 @@ function renderPlanBoard() {
       head.classList.add("gap");
       const gap = document.createElement("span");
       gap.className = "plan-col-gap";
-      gap.textContent = `+${offset - days[index - 1] - 1} d`;
-      gap.title = `${offset - days[index - 1] - 1} empty day(s) hidden`;
+      gap.textContent = `⋯ +${offset - days[index - 1] - 1} d`;
+      gap.title = `Not consecutive: ${offset - days[index - 1] - 1} day(s) without cards hidden`;
       head.append(gap);
     }
     const label = document.createElement("span");
@@ -3828,6 +3830,12 @@ function renderPlanBoard() {
     canvas.append(empty);
   }
   days.forEach((offset, index) => {
+    if (index > 0 && offset - days[index - 1] > 1) {
+      const sep = document.createElement("div");
+      sep.className = "plan-gap-sep";
+      sep.style.left = `${index * colW}px`;
+      canvas.append(sep);
+    }
     if (offset === todayOffset) {
       const col = document.createElement("div");
       col.className = "plan-col-today";
