@@ -4898,14 +4898,15 @@ function planResizeDrag(event, d) {
   // Over a "⋯" separator: on release, a calendar picks the hidden day for the new end (or start).
   clearPlanDropHints();
   d.target = null;
-  const gap = document.elementsFromPoint(event.clientX, event.clientY).find((n) => n.matches(".plan-gap"));
+  const gap = document.elementsFromPoint(event.clientX, event.clientY).find((n) => n.matches(".plan-gap") || (d.kind === "resize-r" && n.matches(".plan-add-col")));
   if (gap && gap.dataset.min) {
+    const isAdd = gap.matches(".plan-add-col");
     const firstHidden = daysBetween(parseISODate(planState.startDate), parseISODate(gap.dataset.min));
     const ok = d.kind === "resize-r" ? firstHidden > d.origStart : firstHidden < origEnd;
     if (ok) {
       gap.classList.add("drop-target");
       document.querySelectorAll(`.plan-gap-veil[data-min="${gap.dataset.min}"]`).forEach((n) => n.classList.add("drop-target"));
-      d.target = { type: "gap", min: gap.dataset.min, max: gap.dataset.max, clientX: event.clientX, clientY: event.clientY };
+      d.target = { type: isAdd ? "add" : "gap", min: gap.dataset.min, max: gap.dataset.max, clientX: event.clientX, clientY: event.clientY };
       const gapRect = gap.getBoundingClientRect();
       const canvasLeft = document.getElementById("planCanvas").getBoundingClientRect().left;
       if (d.kind === "resize-r") {
@@ -4969,7 +4970,7 @@ function finishPlanDrag(d) {
     openPlanDayChooser({ clientX: t.clientX, clientY: t.clientY }, t.min, t.max, (iso) => placePlanCardOnDay(d, t, iso));
     return;
   }
-  if ((d.kind === "resize-r" || d.kind === "resize-l") && t && t.type === "gap") {
+  if ((d.kind === "resize-r" || d.kind === "resize-l") && t && (t.type === "gap" || t.type === "add")) {
     // Restore the card, then let the user pick the hidden day that becomes its end (or start).
     d.card.start = d.origStart;
     d.card.duration = d.origDur;
