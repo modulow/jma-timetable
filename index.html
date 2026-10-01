@@ -485,7 +485,6 @@ body[data-app-mode="planificator"] #undoBtn,
 body[data-app-mode="planificator"] #newBtn,
 body[data-app-mode="planificator"] #openBtn,
 body[data-app-mode="planificator"] #saveBtn,
-body[data-app-mode="planificator"] #cloudBtn,
 body[data-app-mode="planificator"] #settingsBtn,
 body[data-app-mode="planificator"] #pdfBtn { display: none; }
 
@@ -1540,7 +1539,7 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
       <div class="dialog-heading">
         <div>
           <p class="step">SHARED LIBRARY</p>
-          <h2>Team timetables</h2>
+          <h2 id="cloudHeading">Team timetables</h2>
         </div>
         <button id="closeCloudBtn" class="icon-button" type="button" aria-label="Close">×</button>
       </div>
@@ -1975,8 +1974,41 @@ const TYPE_PRESETS = {
   grey: { label: "Grey zone", title: "", duration: 15, background: "#c0c0c0", color: "#18202f", bold: false, pattern: "none" },
   walk: { label: "Optional walk", title: "Optional walk", duration: 60, background: "#e2f0d9", color: "#18202f", bold: false, pattern: "none" },
   visit: { label: "Optional visit", title: "Optional visit", duration: 60, background: "#ddebf7", color: "#18202f", bold: true, pattern: "none" },
-  welcome: { label: "Optional welcome", title: "Welcome", duration: 30, background: "#fff2cc", color: "#18202f", bold: true, pattern: "none" }
+  welcome: { label: "Optional welcome", title: "Welcome", duration: 30, background: "#fff2cc", color: "#18202f", bold: true, pattern: "none" },
+  // One Day Event presets
+  od_welcome: { group: "oneday", label: "Welcome / Registration", title: "Welcome", duration: 30, background: "#1f3864", color: "#ffffff", bold: true, italic: false, pattern: "none" },
+  od_training: { group: "oneday", label: "Training", title: "Training", duration: 90, background: "#ddebf7", color: "#1f3864", bold: true, italic: false, pattern: "none" },
+  od_study: { group: "oneday", label: "Study / Workshop", title: "Study", duration: 60, background: "#e2f0d9", color: "#375623", bold: false, italic: false, pattern: "none" },
+  od_meeting: { group: "oneday", label: "Meeting", title: "Meeting", duration: 60, background: "#ede7f6", color: "#4a2c82", bold: true, italic: false, pattern: "none" },
+  od_pause: { group: "oneday", label: "Pause (15 min)", title: "Pause", duration: 15, background: "#d9d9d9", color: "#404040", bold: false, italic: true, pattern: "none" },
+  od_lunch: { group: "oneday", label: "Lunch", title: "Lunch", duration: 60, background: "#ffe699", color: "#7f6000", bold: true, italic: false, pattern: "none" },
+  od_trajet: { group: "oneday", label: "Trajet / Travel", title: "Trajet", duration: 30, background: "#ffffff", color: "#18202f", bold: false, italic: true, pattern: "diagonal" },
+  od_networking: { group: "oneday", label: "Networking / Drinks", title: "Networking", duration: 60, background: "#fce4d6", color: "#843c0c", bold: false, italic: true, pattern: "none" },
+  od_closing: { group: "oneday", label: "Closing", title: "Closing", duration: 30, background: "#404040", color: "#ffffff", bold: true, italic: false, pattern: "none" }
 };
+
+function populateEventTypes(mode) {
+  const group = mode === "oneday" ? "oneday" : "timetable";
+  const timetableLabels = { train: "Train — fine 20% grey hatching", break: "Break (15 minutes)" };
+  const current = el.eventType.value;
+  el.eventType.replaceChildren();
+  Object.entries(TYPE_PRESETS).forEach(([key, preset]) => {
+    if (key !== "normal" && (preset.group || "timetable") !== group) return;
+    const option = document.createElement("option");
+    option.value = key;
+    option.textContent = timetableLabels[key] || preset.label;
+    el.eventType.append(option);
+  });
+  el.eventType.value = [...el.eventType.options].some((o) => o.value === current) ? current : "normal";
+}
+
+function ensureEventTypeOption(type) {
+  if ([...el.eventType.options].some((o) => o.value === type) || !TYPE_PRESETS[type]) return;
+  const option = document.createElement("option");
+  option.value = type;
+  option.textContent = TYPE_PRESETS[type].label;
+  el.eventType.append(option);
+}
 
 const state = {
   title: "JMA TIMETABLE",
@@ -2236,6 +2268,7 @@ function loadEventIntoEditor(event) {
   el.eventDay.value = String(event.day);
   el.eventStart.value = formatTime(event.start);
   el.duration.value = String(event.duration);
+  ensureEventTypeOption(event.type);
   el.eventType.value = event.type;
   el.activityInput.value = event.title;
   el.backgroundColor.value = event.style.background;
@@ -2374,6 +2407,7 @@ function applyPreset(type) {
   el.backgroundColor.value = preset.background;
   el.textColor.value = preset.color;
   setToggle(el.boldBtn, preset.bold);
+  setToggle(el.italicBtn, Boolean(preset.italic));
   el.alignSelect.value = "center";
   updateCalculatedEnd();
 }
@@ -2853,7 +2887,10 @@ function setCloudStatus(message, isError = false) {
 
 async function cloudRequest(path, options) {
   if (!CLOUD_API_BASE) throw new Error("Shared library is not configured yet.");
-  const res = await fetch(`${CLOUD_API_BASE}${path}`, options);
+  const mode = document.body.dataset.appMode;
+  const folder = mode === "oneday" || mode === "planificator" ? mode : "timetable";
+  const sep = path.includes("?") ? "&" : "?";
+  const res = await fetch(`${CLOUD_API_BASE}${path}${sep}folder=${folder}`, options);
   const body = await res.json().catch(() => ({}));
   if (!res.ok || body.ok === false) throw new Error(body.error || `Request failed (${res.status})`);
   return body;
@@ -2897,15 +2934,23 @@ async function refreshCloudList() {
 }
 
 async function saveToCloud() {
-  const name = cloudEl.saveName.value.trim() || state.title || "planning";
+  const isPlan = document.body.dataset.appMode === "planificator";
+  const name = cloudEl.saveName.value.trim() || (isPlan ? planState.title : state.title) || "planning";
   try {
     setCloudStatus("Verifying you are a human…");
     const turnstileToken = await getTurnstileToken();
-    persist();
+    let data;
+    if (isPlan) {
+      persistPlan();
+      data = { kind: "planificator", ...planState };
+    } else {
+      persist();
+      data = snapshotState();
+    }
     await cloudRequest("/api/save", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, data: snapshotState(), turnstileToken })
+      body: JSON.stringify({ name, data, turnstileToken })
     });
     setCloudStatus("Saved to the shared library.");
     cloudEl.saveName.value = "";
@@ -2918,7 +2963,16 @@ async function saveToCloud() {
 async function loadFromCloud(name) {
   try {
     const { data } = await cloudRequest(`/api/load?name=${encodeURIComponent(name)}`, { method: "GET" });
-    applyProjectData(data, `Loaded "${name}" from the shared library.`);
+    if (document.body.dataset.appMode === "planificator") {
+      const loaded = normalizePlanData(data);
+      if (!loaded) throw new Error("This file is not a Planificator plan.");
+      planState = loaded;
+      persistPlan();
+      renderPlan();
+      showStatus(`Loaded "${name}" from the shared library.`);
+    } else {
+      applyProjectData(data, `Loaded "${name}" from the shared library.`);
+    }
     closeCloudDialog();
   } catch (err) {
     setCloudStatus(`Load failed: ${err.message}`, true);
@@ -2939,6 +2993,10 @@ async function deleteFromCloud(name) {
 }
 
 function openCloudDialog() {
+  const mode = document.body.dataset.appMode;
+  document.getElementById("cloudHeading").textContent = mode === "planificator"
+    ? "Team plans"
+    : mode === "oneday" ? "Team one-day events" : "Team timetables";
   if (typeof cloudEl.dialog.showModal === "function") cloudEl.dialog.showModal();
   else cloudEl.dialog.setAttribute("open", "");
   setCloudStatus("");
@@ -3180,25 +3238,27 @@ function defaultPlanState() {
 
 let planState = defaultPlanState();
 
+function normalizePlanData(data) {
+  if (!data || !Array.isArray(data.days) || !data.days.length) return null;
+  return {
+    title: typeof data.title === "string" && data.title.trim() ? data.title : "PLANIFICATOR",
+    days: data.days.map((day) => ({
+      id: day && day.id ? String(day.id) : makeId(),
+      label: day && typeof day.label === "string" ? day.label : "Day",
+      events: Array.isArray(day && day.events) ? day.events.map((ev) => ({
+        id: ev && ev.id ? String(ev.id) : makeId(),
+        title: ev && typeof ev.title === "string" ? ev.title : "",
+        start: ev && typeof ev.start === "string" ? ev.start : "",
+        end: ev && typeof ev.end === "string" ? ev.end : ""
+      })) : []
+    }))
+  };
+}
+
 function loadPlanState() {
   try {
-    const raw = localStorage.getItem(PLAN_KEY);
-    if (!raw) return;
-    const data = JSON.parse(raw);
-    if (!data || !Array.isArray(data.days) || !data.days.length) return;
-    planState = {
-      title: typeof data.title === "string" && data.title.trim() ? data.title : "PLAN IT",
-      days: data.days.map((day) => ({
-        id: day && day.id ? String(day.id) : makeId(),
-        label: day && typeof day.label === "string" ? day.label : "Day",
-        events: Array.isArray(day && day.events) ? day.events.map((ev) => ({
-          id: ev && ev.id ? String(ev.id) : makeId(),
-          title: ev && typeof ev.title === "string" ? ev.title : "",
-          start: ev && typeof ev.start === "string" ? ev.start : "",
-          end: ev && typeof ev.end === "string" ? ev.end : ""
-        })) : []
-      }))
-    };
+    const loaded = normalizePlanData(JSON.parse(localStorage.getItem(PLAN_KEY)));
+    if (loaded) planState = loaded;
   } catch { /* storage unavailable or corrupt */ }
 }
 
@@ -3406,6 +3466,7 @@ function setAppMode(mode) {
     }
   }
   applyModeHeader(mode);
+  populateEventTypes(mode);
 }
 
 document.querySelectorAll(".mode-card").forEach((card) => {
