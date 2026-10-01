@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>JMA Timetable Generator</title>
+  <title>PLAN IT</title>
   <style>
 :root {
   color-scheme: light;
@@ -281,6 +281,8 @@ h1 { margin: 0; font-size: 21px; font-weight: 700; letter-spacing: -.02em; }
 .day-picker button.active { color: var(--on-accent); background: var(--accent); }
 .day-picker strong { font-size: 18px; }
 .day-picker span { font-size: 12px; }
+.day-picker.locked button:disabled { opacity: .35; cursor: default; }
+.day-picker.locked button:disabled:hover { background: transparent; color: var(--muted); }
 
 .drawer-help {
   margin-top: 28px;
@@ -431,6 +433,135 @@ tbody tr:nth-child(4n + 1) td { border-top-color: var(--hour-line); }
 .event-dialog .event-fields { gap: 16px 16px; margin-top: 22px; }
 .event-dialog .field textarea { min-height: 84px; }
 .dialog-heading-actions { gap: 10px; }
+
+/* ---------- Template chooser (mode picker) ---------- */
+.mode-dialog {
+  width: min(760px, calc(100vw - 40px));
+  max-height: calc(100vh - 40px);
+  border: 0;
+  border-radius: 2px;
+  padding: 0;
+  color: var(--ink);
+  background: var(--panel);
+}
+.mode-dialog::backdrop { background: rgba(255, 255, 255, .82); }
+.mode-dialog[open] { animation: dialog-in .16s ease-out; }
+.mode-shell { padding: 34px 38px; }
+.mode-shell h2 { margin: 2px 0 20px; font-size: 26px; }
+.mode-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.mode-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px 18px;
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: var(--field);
+  color: var(--ink);
+}
+.mode-card:hover { border-color: var(--faint); background: var(--hover); }
+.mode-card strong { font-size: 17px; }
+.mode-card span { font-size: 13px; color: var(--muted); line-height: 1.4; }
+.mode-footnote { margin: 18px 0 0; font-size: 12px; color: var(--muted); }
+
+/* ---------- Planificator ---------- */
+.plan-workspace { display: flex; flex-direction: column; gap: 0; padding: 0; }
+.plan-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 32px;
+}
+.plan-toolbar input[type="text"] {
+  flex: 1;
+  max-width: 420px;
+  height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: var(--field);
+  color: var(--ink);
+}
+.plan-columns {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(220px, 1fr);
+  gap: 18px;
+  overflow-x: auto;
+  padding: 0 32px 32px;
+}
+.plan-day {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: var(--panel);
+}
+.plan-day-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.plan-day-head input[type="text"] {
+  flex: 1;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: var(--field);
+  color: var(--ink);
+  font-weight: 600;
+}
+.plan-events { display: flex; flex-direction: column; gap: 8px; min-height: 8px; }
+.plan-event {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: var(--field);
+}
+.plan-event-time { flex: 0 0 auto; min-width: 72px; font-size: 12px; color: var(--muted); white-space: nowrap; }
+.plan-event-title { flex: 1; font-size: 14px; line-height: 1.35; }
+.plan-event-del {
+  flex: 0 0 auto;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+}
+.plan-event-del:hover { color: var(--ink); }
+.plan-add-form { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.plan-add-form input[type="text"] {
+  flex: 1 1 100%;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: var(--field);
+  color: var(--ink);
+}
+.plan-add-form label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.plan-add-form input[type="time"] {
+  height: 30px;
+  padding: 0 6px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: var(--field);
+  color: var(--ink);
+}
+.plan-add-form button {
+  margin-left: auto;
+}
+.plan-remove-day { align-self: flex-end; }
+.plan-print-area { padding: 0 32px 32px; }
 
 /* ---------- Shared library dialog ---------- */
 .cloud-dialog { width: min(520px, calc(100vw - 40px)); }
@@ -1006,10 +1137,12 @@ tbody tr:nth-child(4n + 1) td { border-top-color: var(--hour-line); }
     -webkit-print-color-adjust: exact !important;
   }
   .app { width: 100%; margin: 0; padding: 0; }
-  .topbar, .settings-drawer, .preview-heading, .empty-message, .status, .event-dialog { display: none !important; }
+  .topbar, .settings-drawer, .preview-heading, .empty-message, .status, .event-dialog, .mode-dialog, .plan-toolbar { display: none !important; }
   .app { display: block; min-height: 0; }
   .workspace, .workspace.settings-open { display: block; padding: 0; }
   .print-area { padding: 0; }
+  body[data-app-mode="planificator"] #workspace { display: none !important; }
+  body:not([data-app-mode="planificator"]) #planWorkspace { display: none !important; }
   .preview {
     width: 100%;
     border: 0;
@@ -1086,6 +1219,41 @@ tbody tr:nth-child(4n + 1) td { border-top-color: var(--hour-line); }
     color: #18202f !important;
   }
   .event-time.selected, .event-activity.selected { box-shadow: none; }
+
+  /* ---------- Planificator print ---------- */
+  .plan-print-area { padding: 0; width: 100%; page-break-inside: avoid; break-inside: avoid-page; }
+  .plan-columns {
+    display: grid;
+    grid-template-columns: repeat(var(--plan-day-count, 1), 1fr);
+    gap: 4mm;
+    overflow: visible;
+  }
+  .plan-day {
+    border: 1px solid #8b9690;
+    border-radius: 0;
+    padding: 2mm;
+    break-inside: avoid-page;
+    background: #fff !important;
+  }
+  .plan-day-head { border: 0; }
+  .plan-day-head input {
+    border: 0;
+    background: transparent;
+    font-weight: 700;
+    padding: 0;
+    color: #1f2924;
+    font-size: var(--plan-font-size, 9pt);
+  }
+  .plan-events { gap: calc(var(--plan-font-size, 9pt) * .35); }
+  .plan-event {
+    border: 1px solid #c8d2cc;
+    border-radius: 0;
+    padding: .5mm 1mm;
+    background: #fff !important;
+  }
+  .plan-event-time { font-size: calc(var(--plan-font-size, 9pt) - 1pt); min-width: 0; }
+  .plan-event-title { font-size: var(--plan-font-size, 9pt); line-height: 1.1; }
+  .plan-event-del, .plan-add-form, .plan-remove-day, .plan-add-day-ghost { display: none !important; }
 }
 
 </style>
@@ -1097,7 +1265,7 @@ tbody tr:nth-child(4n + 1) td { border-top-color: var(--hour-line); }
       <div class="titlebar">
         <div class="brand">
           <span class="brand-mark" aria-hidden="true"></span>
-          <h1>JMA Timetable</h1>
+          <h1>PLAN IT</h1>
           <span class="titlebar-file">Build a clear schedule for every visit, meeting and journey.</span>
         </div>
       </div>
@@ -1125,6 +1293,9 @@ tbody tr:nth-child(4n + 1) td { border-top-color: var(--hour-line); }
         <div class="ribbon-group">
           <button id="settingsBtn" class="ribbon-btn settings-button" type="button" aria-expanded="false">
             <svg class="ribbon-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg><span>Settings</span>
+          </button>
+          <button id="templateBtn" class="ribbon-btn" type="button" title="Switch template">
+            <svg class="ribbon-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg><span>Template</span>
           </button>
         </div>
         <span class="ribbon-spacer"></span>
@@ -1213,8 +1384,46 @@ tbody tr:nth-child(4n + 1) td { border-top-color: var(--hour-line); }
       </section>
     </section>
 
+    <section id="planWorkspace" class="workspace plan-workspace" hidden>
+      <div class="plan-toolbar">
+        <input id="planTitleInput" type="text" value="PLANIFICATOR" maxlength="80" aria-label="Plan title">
+        <button id="planAddDayBtn" class="button secondary" type="button">Add day</button>
+        <button id="planPdfBtn" class="ribbon-btn primary-action" type="button">
+          <svg class="ribbon-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9V3h10v6"/><path d="M7 17H5a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-2"/><path d="M7 14h10v7H7z"/></svg><span>Preview / PDF</span>
+        </button>
+      </div>
+      <div id="planPrintArea" class="plan-print-area">
+        <div class="print-title">
+          <h2 id="planPrintTitle">PLANIFICATOR</h2>
+        </div>
+        <div id="planColumns" class="plan-columns"></div>
+      </div>
+    </section>
+
     <p id="status" class="status" role="status" aria-live="polite"></p>
   </main>
+
+  <dialog id="modeDialog" class="mode-dialog">
+    <div class="mode-shell">
+      <p class="step">GET STARTED</p>
+      <h2>Choose your template</h2>
+      <div class="mode-grid">
+        <button class="mode-card" type="button" data-mode="timetable">
+          <strong>Timetable</strong>
+          <span>Multi-day schedule on a 15-minute grid, full cell formatting.</span>
+        </button>
+        <button class="mode-card" type="button" data-mode="oneday">
+          <strong>One Day Event</strong>
+          <span>Same timetable tool, locked to a single day.</span>
+        </button>
+        <button class="mode-card" type="button" data-mode="planificator">
+          <strong>Planificator</strong>
+          <span>Flexible day-by-day agenda, no fixed time grid — add events with optional times.</span>
+        </button>
+      </div>
+      <p class="mode-footnote">You can switch templates anytime from the "Template" button.</p>
+    </div>
+  </dialog>
 
   <dialog id="eventDialog" class="event-dialog">
     <form method="dialog" class="dialog-shell" novalidate>
@@ -2924,6 +3133,220 @@ document.getElementById("themeBtn").addEventListener("click", () => {
 let savedTheme = null;
 try { savedTheme = localStorage.getItem(THEME_KEY); } catch { /* storage unavailable */ }
 applyTheme(savedTheme === "dark" ? "dark" : "light");
+
+/* ---------------- Planificator ---------------- */
+const PLAN_KEY = "jma-planificator-v1";
+
+function makeId() {
+  return crypto.randomUUID ? crypto.randomUUID() : `id-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function defaultPlanState() {
+  return { title: "PLAN IT", days: [{ id: makeId(), label: "Day 1", events: [] }] };
+}
+
+let planState = defaultPlanState();
+
+function loadPlanState() {
+  try {
+    const raw = localStorage.getItem(PLAN_KEY);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    if (!data || !Array.isArray(data.days) || !data.days.length) return;
+    planState = {
+      title: typeof data.title === "string" && data.title.trim() ? data.title : "PLAN IT",
+      days: data.days.map((day) => ({
+        id: day && day.id ? String(day.id) : makeId(),
+        label: day && typeof day.label === "string" ? day.label : "Day",
+        events: Array.isArray(day && day.events) ? day.events.map((ev) => ({
+          id: ev && ev.id ? String(ev.id) : makeId(),
+          title: ev && typeof ev.title === "string" ? ev.title : "",
+          start: ev && typeof ev.start === "string" ? ev.start : "",
+          end: ev && typeof ev.end === "string" ? ev.end : ""
+        })) : []
+      }))
+    };
+  } catch { /* storage unavailable or corrupt */ }
+}
+
+function persistPlan() {
+  try { localStorage.setItem(PLAN_KEY, JSON.stringify(planState)); } catch { /* storage unavailable */ }
+}
+
+function updatePlanPrintSizing() {
+  const dayCount = Math.max(1, Math.min(6, planState.days.length));
+  const maxEvents = planState.days.reduce((max, day) => Math.max(max, day.events.length), 0);
+  const rows = Math.max(1, maxEvents) + 1;
+  const fontSize = Math.max(6.5, Math.min(11, 190 / (rows * 1.85)));
+  document.documentElement.style.setProperty("--plan-day-count", String(dayCount));
+  document.documentElement.style.setProperty("--plan-font-size", `${fontSize}pt`);
+}
+
+function renderPlan() {
+  const titleInput = document.getElementById("planTitleInput");
+  if (document.activeElement !== titleInput) titleInput.value = planState.title;
+  document.getElementById("planPrintTitle").textContent = planState.title || "PLAN IT";
+
+  const columns = document.getElementById("planColumns");
+  columns.replaceChildren();
+
+  planState.days.forEach((day) => {
+    const dayEl = document.createElement("div");
+    dayEl.className = "plan-day";
+
+    const head = document.createElement("div");
+    head.className = "plan-day-head";
+    const labelInput = document.createElement("input");
+    labelInput.type = "text";
+    labelInput.value = day.label;
+    labelInput.maxLength = 60;
+    labelInput.addEventListener("change", () => {
+      day.label = labelInput.value.trim() || "Day";
+      persistPlan();
+    });
+    head.append(labelInput);
+    if (planState.days.length > 1) {
+      const removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.className = "button danger plan-remove-day";
+      removeBtn.textContent = "Remove";
+      removeBtn.addEventListener("click", () => {
+        planState.days = planState.days.filter((d) => d.id !== day.id);
+        persistPlan();
+        renderPlan();
+      });
+      head.append(removeBtn);
+    }
+    dayEl.append(head);
+
+    const eventsList = document.createElement("div");
+    eventsList.className = "plan-events";
+    day.events.forEach((ev) => {
+      const evEl = document.createElement("div");
+      evEl.className = "plan-event";
+      if (ev.start || ev.end) {
+        const timeEl = document.createElement("span");
+        timeEl.className = "plan-event-time";
+        timeEl.textContent = [ev.start, ev.end].filter(Boolean).join(" – ");
+        evEl.append(timeEl);
+      }
+      const titleEl = document.createElement("span");
+      titleEl.className = "plan-event-title";
+      titleEl.textContent = ev.title;
+      evEl.append(titleEl);
+      const delBtn = document.createElement("button");
+      delBtn.type = "button";
+      delBtn.className = "plan-event-del";
+      delBtn.setAttribute("aria-label", "Remove event");
+      delBtn.textContent = "×";
+      delBtn.addEventListener("click", () => {
+        day.events = day.events.filter((e) => e.id !== ev.id);
+        persistPlan();
+        renderPlan();
+      });
+      evEl.append(delBtn);
+      eventsList.append(evEl);
+    });
+    dayEl.append(eventsList);
+
+    const form = document.createElement("div");
+    form.className = "plan-add-form";
+    const titleField = document.createElement("input");
+    titleField.type = "text";
+    titleField.placeholder = "New event…";
+    const startField = document.createElement("input");
+    startField.type = "time";
+    const endField = document.createElement("input");
+    endField.type = "time";
+    const startLabel = document.createElement("label");
+    startLabel.append("From", startField);
+    const endLabel = document.createElement("label");
+    endLabel.append("To", endField);
+    const addBtn = document.createElement("button");
+    addBtn.type = "button";
+    addBtn.className = "button primary";
+    addBtn.textContent = "Add";
+    const addEvent = () => {
+      const title = titleField.value.trim();
+      if (!title) { titleField.focus(); return; }
+      day.events.push({ id: makeId(), title, start: startField.value || "", end: endField.value || "" });
+      persistPlan();
+      renderPlan();
+    };
+    addBtn.addEventListener("click", addEvent);
+    titleField.addEventListener("keydown", (event) => { if (event.key === "Enter") addEvent(); });
+    form.append(titleField, startLabel, endLabel, addBtn);
+    dayEl.append(form);
+
+    columns.append(dayEl);
+  });
+
+  updatePlanPrintSizing();
+}
+
+document.getElementById("planTitleInput").addEventListener("change", (event) => {
+  planState.title = event.target.value.trim() || "PLAN IT";
+  persistPlan();
+  renderPlan();
+});
+
+document.getElementById("planAddDayBtn").addEventListener("click", () => {
+  planState.days.push({ id: makeId(), label: `Day ${planState.days.length + 1}`, events: [] });
+  persistPlan();
+  renderPlan();
+});
+
+document.getElementById("planPdfBtn").addEventListener("click", () => {
+  updatePlanPrintSizing();
+  requestAnimationFrame(() => window.print());
+});
+
+/* ---------------- Template chooser ---------------- */
+const modeDialog = document.getElementById("modeDialog");
+const dayPickerEl = document.querySelector(".day-picker");
+
+function lockDayPicker(locked) {
+  if (!dayPickerEl) return;
+  dayPickerEl.classList.toggle("locked", locked);
+  dayPickerEl.querySelectorAll("button").forEach((button) => {
+    if (button.dataset.days !== "1") button.disabled = locked;
+  });
+}
+
+function setAppMode(mode) {
+  document.body.dataset.appMode = mode;
+  const workspace = document.getElementById("workspace");
+  const planWorkspace = document.getElementById("planWorkspace");
+  if (mode === "planificator") {
+    workspace.hidden = true;
+    planWorkspace.hidden = false;
+    loadPlanState();
+    renderPlan();
+  } else {
+    workspace.hidden = false;
+    planWorkspace.hidden = true;
+    if (mode === "oneday") {
+      const oneDayBtn = document.querySelector('[data-days="1"]');
+      if (oneDayBtn) oneDayBtn.click();
+      lockDayPicker(true);
+    } else {
+      lockDayPicker(false);
+    }
+  }
+}
+
+document.querySelectorAll(".mode-card").forEach((card) => {
+  card.addEventListener("click", () => {
+    setAppMode(card.dataset.mode);
+    modeDialog.close();
+  });
+});
+
+document.getElementById("templateBtn").addEventListener("click", () => {
+  modeDialog.showModal();
+});
+
+modeDialog.showModal();
 
 loadState();
 syncProjectInputs();
