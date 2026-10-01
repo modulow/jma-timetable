@@ -748,6 +748,7 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
 .postit:hover { box-shadow: 0 2px 4px rgba(0,0,0,.2), 0 8px 18px rgba(0,0,0,.12); }
 .postit:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .plan-tray .postit { position: relative; flex: none; }
+.plan-tray[hidden] { display: none; }
 .postit-title { font-size: 13px; font-weight: 700; line-height: 1.2; overflow-wrap: anywhere; }
 .postit-desc {
   display: -webkit-box;
@@ -1615,12 +1616,12 @@ body.plan-dragging, body.plan-dragging * { cursor: grabbing !important; user-sel
         <label>Project start <input id="planStartInput" type="date"></label>
         <label>Project end <input id="planEndInput" type="date"></label>
         <button id="planTodayBtn" class="button secondary" type="button">Today</button>
-        <button id="planLineUpBtn" class="button secondary" type="button" title="Place every idea from the left column on the calendar, one after the other, linked as steps">Line up ideas as steps</button>
+        <button id="planLineUpBtn" class="button secondary" type="button" title="Place the unscheduled ideas of an older plan on the calendar, one after the other, linked as steps" hidden>Line up ideas as steps</button>
         <button id="planAutoBtn" class="button primary" type="button" title="Each linked step starts when the previous one ends">Auto-schedule</button>
       </div>
-      <p class="plan-help">Pick a day in the calendar to add a step on it · only days with cards are shown · type ideas on the left (Enter) and drag them onto a day, or click “Line up ideas as steps” · drag a card to another day · drag a day header onto another to swap the days · pull the bottom edge to set the work time · drag the ● dot onto another card to link steps · click a card to edit it.</p>
+      <p class="plan-help">Click + to add a step on a day · only days with steps are shown · click the grey ⋯ band between two days to add a step on a hidden day · drag a card to another day · drag a day header onto another to swap the days · pull the bottom edge to set the work time · drag the ● dot onto another card to link steps · click a card to edit it.</p>
       <div class="plan-body">
-        <aside id="planTray" class="plan-tray" aria-label="Ideas">
+        <aside id="planTray" class="plan-tray" aria-label="Ideas" hidden>
           <div id="planPicker" class="plan-picker" aria-label="Calendar: pick a day to add a step on it"></div>
           <input id="planQuickAdd" class="plan-quick-add" type="text" maxlength="120" placeholder="Type an idea + Enter" aria-label="Quick add idea">
           <div id="planNewCard" class="plan-new" role="button" tabindex="0">+ New post-it</div>
@@ -1765,7 +1766,7 @@ body.plan-dragging, body.plan-dragging * { cursor: grabbing !important; user-sel
           <select id="cardUnit"><option value="1">Days</option><option value="7">Weeks</option></select>
         </label>
         <label class="field span-2"><span>Work time in hours — optional, by half hour (the post-it gets taller)</span><input id="cardHours" type="number" min="0" max="24" step="0.5" placeholder="e.g. 2.5"></label>
-        <label class="field span-2"><span>Start date (empty = idea, not scheduled)</span><input id="cardStart" type="date"></label>
+        <label class="field span-2"><span>Start date</span><input id="cardStart" type="date" required></label>
         <div class="field span-2"><span>Color</span><div id="cardColors" class="card-colors"></div></div>
       </div>
       <div class="event-actions">
@@ -3541,9 +3542,7 @@ function defaultPlanState() {
     scale: "day",
     openDays: [],
     cards: [
-      kickoff, research, interviews, design, build, test, launch,
-      card("Newsletter?", "Idea to explore", null, 2, 0, "yellow"),
-      card("Partner event", "Who could join?", null, 3, 0, "grey")
+      kickoff, research, interviews, design, build, test, launch
     ],
     links: [link(kickoff, research), link(research, interviews), link(research, design), link(interviews, design), link(design, build), link(build, test), link(test, launch)]
   };
@@ -3846,6 +3845,7 @@ function renderPlan() {
   planEl.end.value = planState.endDate || "";
   planEl.end.min = planState.startDate;
   renderPlanTray();
+  document.getElementById("planLineUpBtn").hidden = !planState.cards.some((c) => c.start === null);
   renderPlanBoard();
 }
 
@@ -4717,7 +4717,7 @@ function saveCardDialog() {
   card.duration = Math.min(3650, amount * Number(cardEl.unit.value));
   card.hours = normalizePlanHours(cardEl.hours.value);
   if (!cardEl.start.value) {
-    card.start = null;
+    // A step always stays on the calendar: an empty date keeps the current one.
   } else if (isValidISODate(cardEl.start.value)) {
     let offset = daysBetween(parseISODate(planState.startDate), parseISODate(cardEl.start.value));
     if (offset < 0) {
