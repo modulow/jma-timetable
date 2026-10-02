@@ -465,21 +465,6 @@ tbody tr:nth-child(4n + 1) td { border-top-color: var(--hour-line); }
 .mode-card span { font-size: 13px; color: var(--muted); line-height: 1.4; }
 .mode-footnote { margin: 18px 0 0; font-size: 12px; color: var(--muted); }
 
-/* ---------- Human gate ---------- */
-.human-gate {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, .92);
-}
-.human-gate[hidden] { display: none; }
-.human-gate-box { display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; color: #18202f; }
-.human-gate-box h2 { margin: 0; font-size: 28px; letter-spacing: .04em; }
-.human-gate-box p { margin: 0; font-size: 15px; color: #555; }
-
 /* Mind Plan mode hides timetable-only ribbon actions */
 body[data-app-mode="planificator"] #workspace,
 #workspace[hidden], #planWorkspace[hidden] { display: none !important; }
@@ -1703,7 +1688,6 @@ body.plan-dragging, body.plan-dragging * { cursor: grabbing !important; user-sel
 }
 
 </style>
-<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 </head>
 <body>
   <main class="app">
@@ -1861,15 +1845,6 @@ body.plan-dragging, body.plan-dragging * { cursor: grabbing !important; user-sel
 
     <p id="status" class="status" role="status" aria-live="polite"></p>
   </main>
-
-  <div id="humanGate" class="human-gate" role="alertdialog" aria-live="polite" aria-label="Human verification">
-    <div class="human-gate-box">
-      <h2>PLAN IT</h2>
-      <p id="humanGateText">Verifying you are a human…</p>
-      <div id="humanGateWidget"></div>
-      <button id="humanGateRetry" class="button primary" type="button" hidden>Try again</button>
-    </div>
-  </div>
 
   <dialog id="modeDialog" class="mode-dialog">
     <div class="mode-shell">
@@ -3313,22 +3288,44 @@ el.fileInput.addEventListener("change", () => {
 // See worker/README.md for deployment instructions. Left empty = feature disabled gracefully.
 const CLOUD_API_BASE = "https://jma-timetable-api.laurentanciaux.workers.dev";
 
-// Cloudflare Turnstile: silently proves a human triggered the save/delete,
-// since the shared library has no login. Rendered in "execute" mode so it
-// only runs (and shows a visible challenge, if ever needed) right when a
-// save/delete is attempted, not on every page load.
+// Turnstile is loaded only when a shared-library write is attempted.
 const TURNSTILE_SITE_KEY = "0x4AAAAAAFLTrJxT91STTpK2";
 let turnstileWidgetId = null;
 let turnstilePending = null;
+let turnstileScriptPromise = null;
 
-function getTurnstileToken() {
-  if (typeof turnstile === "undefined") {
-    return Promise.reject(new Error("Human verification is still loading, try again in a moment."));
+function loadTurnstile() {
+  if (typeof window.turnstile !== "undefined") return Promise.resolve(window.turnstile);
+  if (!turnstileScriptPromise) {
+    turnstileScriptPromise = new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js";
+      script.async = true;
+      script.onload = () => {
+        if (typeof window.turnstile === "undefined") {
+          turnstileScriptPromise = null;
+          reject(new Error("Human verification could not be initialized."));
+          return;
+        }
+        resolve(window.turnstile);
+      };
+      script.onerror = () => {
+        turnstileScriptPromise = null;
+        script.remove();
+        reject(new Error("Human verification could not load."));
+      };
+      document.head.appendChild(script);
+    });
   }
+  return turnstileScriptPromise;
+}
+
+async function getTurnstileToken() {
+  const turnstileApi = await loadTurnstile();
   return new Promise((resolve, reject) => {
     turnstilePending = { resolve, reject };
     if (turnstileWidgetId === null) {
-      turnstileWidgetId = turnstile.render("#turnstileContainer", {
+      turnstileWidgetId = turnstileApi.render("#turnstileContainer", {
         sitekey: TURNSTILE_SITE_KEY,
         execution: "execute",
         appearance: "interaction-only",
@@ -3337,9 +3334,9 @@ function getTurnstileToken() {
         "expired-callback": () => {}
       });
     } else {
-      turnstile.reset(turnstileWidgetId);
+      turnstileApi.reset(turnstileWidgetId);
     }
-    turnstile.execute(turnstileWidgetId);
+    turnstileApi.execute(turnstileWidgetId);
   });
 }
 
@@ -5486,63 +5483,12 @@ document.getElementById("templateBtn").addEventListener("click", () => {
   modeDialog.showModal();
 });
 
-/* ---------------- Human verification gate on page load ---------------- */
-const humanGate = document.getElementById("humanGate");
-const humanGateText = document.getElementById("humanGateText");
-const humanGateRetry = document.getElementById("humanGateRetry");
-let humanGateWidgetId = null;
-
-function humanGatePassed() {
-  humanGate.hidden = true;
-  modeDialog.showModal();
-}
-
-function humanGateFailed(message) {
-  humanGateText.textContent = message;
-  humanGateRetry.hidden = false;
-}
-
-function waitForTurnstile(timeoutMs) {
-  return new Promise((resolve, reject) => {
-    const started = Date.now();
-    (function check() {
-      if (typeof turnstile !== "undefined") return resolve();
-      if (Date.now() - started > timeoutMs) return reject(new Error("timeout"));
-      setTimeout(check, 100);
-    })();
-  });
-}
-
-async function runHumanGate() {
-  humanGateRetry.hidden = true;
-  humanGateText.textContent = "Verifying you are a human…";
-  try {
-    await waitForTurnstile(15000);
-  } catch {
-    humanGateFailed("Verification could not load. Check your connection and try again.");
-    return;
-  }
-  if (humanGateWidgetId !== null) {
-    turnstile.reset(humanGateWidgetId);
-    return;
-  }
-  humanGateWidgetId = turnstile.render("#humanGateWidget", {
-    sitekey: TURNSTILE_SITE_KEY,
-    appearance: "interaction-only",
-    callback: () => humanGatePassed(),
-    "error-callback": () => humanGateFailed("Verification failed. Please try again."),
-    "expired-callback": () => {}
-  });
-}
-
-humanGateRetry.addEventListener("click", runHumanGate);
-runHumanGate();
-
 loadState();
 syncProjectInputs();
 resetEditor({ day: 0, minutes: parseTime(state.rangeStart) });
 render();
 updateUndoButton();
+modeDialog.showModal();
 
 </script>
 </body>
