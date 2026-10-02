@@ -672,7 +672,7 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
 .plan-hours span { position: absolute; right: 8px; padding-top: 3px; line-height: 1; white-space: nowrap; pointer-events: none; font-variant-numeric: tabular-nums; }
 .plan-hours span.hour { font-size: 16px; font-weight: 900; color: var(--ink); letter-spacing: -.02em; }
 .plan-hours span.half { font-size: 11px; font-weight: 700; color: var(--muted); }
-.plan-hours span.last { transform: translateY(-100%); padding: 0 0 2px; }
+.plan-hours span:last-child { transform: translateY(-100%); padding: 0 0 2px; }
 .plan-scale {
   position: sticky;
   top: 0;
@@ -907,59 +907,13 @@ body[data-app-mode="planificator"] #pdfBtn { display: none; }
 .plan-canvas {
   position: relative;
   --band: color-mix(in srgb, var(--sub-bg) 65%, var(--panel));
-  cursor: copy;
-}
-.plan-hour-row {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: calc(var(--slot) * 2);
   background-image:
     linear-gradient(to bottom, color-mix(in srgb, var(--ink) 22%, transparent) 1px, transparent 1px),
-    linear-gradient(to bottom, transparent calc(var(--slot) - 1px), color-mix(in srgb, var(--ink) 8%, transparent) calc(var(--slot) - 1px), color-mix(in srgb, var(--ink) 8%, transparent) var(--slot), transparent var(--slot));
-  pointer-events: none;
+    linear-gradient(to bottom, transparent calc(var(--slot) - 1px), color-mix(in srgb, var(--ink) 8%, transparent) calc(var(--slot) - 1px), color-mix(in srgb, var(--ink) 8%, transparent) var(--slot), transparent var(--slot)),
+    linear-gradient(to bottom, var(--band) 50%, transparent 50%);
+  background-size: 100% calc(var(--slot) * 2), 100% calc(var(--slot) * 2), 100% calc(var(--slot) * 4);
+  cursor: copy;
 }
-.plan-hour-row.odd { background-color: var(--band); }
-.plan-vgap {
-  position: absolute;
-  left: 0;
-  right: 0;
-  z-index: 0;
-  display: block;
-  padding: 0;
-  border: 0;
-  border-top: 2px solid var(--line);
-  border-bottom: 2px solid var(--line);
-  background: repeating-linear-gradient(135deg, var(--sub-bg) 0 6px, var(--panel) 6px 12px);
-  color: var(--muted);
-  font: inherit;
-  cursor: pointer;
-  transition: background .15s, color .15s;
-}
-.plan-vgap:hover { background: var(--hover); color: var(--ink); }
-.plan-vgap-label { position: sticky; left: 76px; display: inline-block; margin-left: 12px; padding: 0 8px; background: var(--panel); font-size: 12px; font-weight: 800; letter-spacing: .06em; line-height: 20px; }
-.plan-vgap.drop-target, .plan-vgap-head.drop-target { background: #1f6bff; color: #fff; }
-.plan-vgap.drop-target .plan-vgap-label { background: transparent; color: #fff; }
-.plan-vgap-head {
-  position: absolute;
-  left: 0;
-  right: 0;
-  display: flex;
-  align-items: baseline;
-  justify-content: center;
-  gap: 3px;
-  border-top: 2px solid var(--line);
-  border-bottom: 2px solid var(--line);
-  background: repeating-linear-gradient(135deg, var(--sub-bg) 0 6px, var(--panel) 6px 12px);
-  color: var(--ink);
-  line-height: 28px;
-}
-.plan-vgap-n { font-size: 24px; font-weight: 900; letter-spacing: -.02em; }
-.plan-vgap-unit { font-size: 11px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
-.plan-vgap-head.drop-target .plan-vgap-unit { color: #fff; }
-.plan-hour-grid { grid-template-columns: repeat(4, 1fr); }
-.plan-hour-cal .plan-cal-day { font-variant-numeric: tabular-nums; }
-.plan-hour-cal .plan-cal-day.is-half { font-weight: 500; }
 .plan-weekend { position: absolute; top: 0; bottom: 0; background: var(--sub-bg); pointer-events: none; }
 .plan-month-line { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--line); pointer-events: none; }
 .plan-today { position: absolute; top: 0; bottom: 0; width: 2px; background: #e5484d; opacity: .7; pointer-events: none; }
@@ -3796,63 +3750,6 @@ function planTimeAt(y) {
   return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
 }
 
-// Vertical compaction: every run of whole hours without any step collapses into a thin band,
-// like the "⋯" separators between non-consecutive days. card.y stays a time position;
-// these helpers map it to / from the on-screen position. The map is frozen at each render.
-const PLAN_VGAP_H = 34;
-let planVMap = null;
-
-function planBuildVMap() {
-  const hourPx = 2 * PLAN_SLOT_PX;
-  const hours = PLAN_DAY_END_H - PLAN_DAY_START_H;
-  const used = new Array(hours).fill(false);
-  planState.cards.forEach((c) => {
-    if (c.start === null) return;
-    const h = planCardHeight(c);
-    const y = planSnapY(c.y, h);
-    for (let i = Math.floor(y / hourPx); i < hours && i * hourPx < y + h; i += 1) used[i] = true;
-  });
-  const segs = [];
-  let s = 0;
-  for (let i = 0; i < hours;) {
-    let j = i;
-    while (j < hours && used[j] === used[i]) j += 1;
-    const len = used[i] ? (j - i) * hourPx : PLAN_VGAP_H;
-    segs.push({ y0: i * hourPx, y1: j * hourPx, s0: s, s1: s + len, hidden: !used[i] });
-    s += len;
-    i = j;
-  }
-  return segs;
-}
-
-function planVSegs() { return planVMap || (planVMap = planBuildVMap()); }
-
-function planYToScreen(y) {
-  const segs = planVSegs();
-  const g = segs.find((x) => y <= x.y1) || segs[segs.length - 1];
-  if (!g) return y;
-  const t = Math.max(0, Math.min(y, g.y1) - g.y0);
-  return g.hidden ? g.s0 + (t / (g.y1 - g.y0)) * (g.s1 - g.s0) : g.s0 + t;
-}
-
-function planScreenToY(s) {
-  const segs = planVSegs();
-  const g = segs.find((x) => s <= x.s1) || segs[segs.length - 1];
-  if (!g) return s;
-  const t = Math.max(0, Math.min(s, g.s1) - g.s0);
-  return g.hidden ? g.y0 + (t / (g.s1 - g.s0)) * (g.y1 - g.y0) : g.y0 + t;
-}
-
-function planVTotal() {
-  const segs = planVSegs();
-  return segs.length ? segs[segs.length - 1].s1 : PLAN_SLOTS * PLAN_SLOT_PX;
-}
-
-function planHoursLabel(g) {
-  const n = (g.y1 - g.y0) / (2 * PLAN_SLOT_PX);
-  return `<b class="plan-vgap-n">${n}</b><small class="plan-vgap-unit">h</small>`;
-}
-
 const pad2 = (n) => String(n).padStart(2, "0");
 function toISODate(date) { return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`; }
 function parseISODate(str) { const [y, m, d] = str.split("-").map(Number); return new Date(y, m - 1, d); }
@@ -4186,13 +4083,11 @@ function planCardRect(card) {
   // Spans from its first-day column to its last-day column.
   const endIndex = Math.max(index, days.indexOf(planCardEnd(card)));
   const x = planColX(days, index);
-  const y = planSnapY(card.y, planCardHeight(card));
-  const top = planYToScreen(y);
   return {
     x: x + 8,
-    y: top,
+    y: planSnapY(card.y, planCardHeight(card)),
     w: planColX(days, endIndex) + colW - x - 16,
-    h: planYToScreen(y + planCardHeight(card)) - top
+    h: planCardHeight(card)
   };
 }
 
@@ -4315,7 +4210,6 @@ function renderPlanTray() {
 }
 
 function renderPlanBoard() {
-  planVMap = planBuildVMap();
   const board = planEl.board;
   board.replaceChildren();
   const days = planDays();
@@ -4428,71 +4322,20 @@ function renderPlanBoard() {
 
   const gutter = document.createElement("div");
   gutter.className = "plan-hours";
-  const vsegs = planVSegs();
-  const hiddenAt = (y) => vsegs.some((g) => g.hidden && y >= g.y0 && (y < g.y1 || g.y1 === PLAN_SLOTS * PLAN_SLOT_PX));
-  const vRange = (g) => `${planTimeAt(g.y0)}–${planTimeAt(g.y1)}`;
   for (let slot = 0; slot <= PLAN_SLOTS; slot += 1) {
-    const y = slot * PLAN_SLOT_PX;
-    if (hiddenAt(y)) continue;
     const mark = document.createElement("span");
     mark.className = slot % 2 ? "half" : "hour";
-    if (slot === PLAN_SLOTS) mark.classList.add("last");
-    mark.style.top = `${planYToScreen(y)}px`;
-    mark.textContent = planTimeAt(y).replace(/^0/, "");
+    mark.style.top = `${slot * PLAN_SLOT_PX}px`;
+    mark.textContent = planTimeAt(slot * PLAN_SLOT_PX).replace(/^0/, "");
     gutter.append(mark);
   }
-  vsegs.filter((g) => g.hidden).forEach((g) => {
-    const band = document.createElement("div");
-    band.className = "plan-vgap-head";
-    band.style.top = `${g.s0}px`;
-    band.style.height = `${g.s1 - g.s0}px`;
-    band.dataset.y0 = String(g.y0);
-    band.title = `${vRange(g)} without steps hidden`;
-    band.innerHTML = planHoursLabel(g);
-    gutter.append(band);
-  });
   board.append(gutter);
 
   const canvas = document.createElement("div");
   canvas.className = "plan-canvas";
   canvas.id = "planCanvas";
   const scheduled = planState.cards.filter((c) => c.start !== null);
-  canvas.style.height = `${planVTotal()}px`;
-
-  // Hour rows (only the visible ones) and one band per run of empty hours.
-  vsegs.forEach((g) => {
-    if (g.hidden) return;
-    for (let y = g.y0; y < g.y1; y += 2 * PLAN_SLOT_PX) {
-      const row = document.createElement("div");
-      row.className = "plan-hour-row";
-      if ((y / (2 * PLAN_SLOT_PX)) % 2 === 0) row.classList.add("odd");
-      row.style.top = `${planYToScreen(y)}px`;
-      canvas.append(row);
-    }
-  });
-  vsegs.filter((g) => g.hidden).forEach((g) => {
-    const band = document.createElement("button");
-    band.type = "button";
-    band.className = "plan-vgap";
-    band.style.top = `${g.s0}px`;
-    band.style.height = `${g.s1 - g.s0}px`;
-    band.dataset.y0 = String(g.y0);
-    band.dataset.y1 = String(g.y1);
-    band.title = `${vRange(g)} without steps hidden · click to add a step at one of these hours`;
-    band.innerHTML = `<span class="plan-vgap-label">${vRange(g)}</span>`;
-    band.addEventListener("click", (event) => {
-      const px = event.clientX - canvas.getBoundingClientRect().left;
-      const day = planDayAtX(days, px);
-      openPlanHourChooser(event, planHourOptions(g.y0, g.y1, "start"), "Pick the start time of the new step", (y) => {
-        const card = newPlanCard(day, y);
-        planState.cards.push(card);
-        persistPlan();
-        renderPlan();
-        openCardDialog(card, true);
-      });
-    });
-    canvas.append(band);
-  });
+  canvas.style.height = `${PLAN_SLOTS * PLAN_SLOT_PX}px`;
 
   days.forEach((offset, index) => {
     const x = planColX(days, index);
@@ -4611,7 +4454,7 @@ function renderPlanBoard() {
   canvas.append(addCol);
 
   canvas.addEventListener("dblclick", (event) => {
-    if (event.target.closest(".postit, .plan-gap, .plan-vgap, .plan-add-col")) return;
+    if (event.target.closest(".postit, .plan-gap, .plan-add-col")) return;
     const pos = planCanvasPosition(event.clientX, event.clientY, 0, PLAN_CARD_H / 2);
     const card = newPlanCard(pos.start, pos.y);
     planState.cards.push(card);
@@ -4650,7 +4493,7 @@ function planCanvasPosition(clientX, clientY, offX, offY) {
   const px = clientX - offX - rect.left;
   let col = 0;
   days.forEach((_, i) => { if (Math.abs(planColX(days, i) - px) < Math.abs(planColX(days, col) - px)) col = i; });
-  const y = planSnapY(planScreenToY(clientY - offY - rect.top));
+  const y = planSnapY(clientY - offY - rect.top);
   const fallback = Math.max(0, daysBetween(parseISODate(planState.startDate), new Date()));
   return { start: days.length ? days[col] : fallback, y, col };
 }
@@ -4770,71 +4613,6 @@ function closePlanDayChooser() {
   if (!pop) return;
   if (pop.cleanup) pop.cleanup();
   pop.remove();
-}
-
-// Half-hour choices inside a hidden band: start times (y0 … y1 - ½h) or end times (y0 + ½h … y1).
-function planHourOptions(y0, y1, kind, min = 0) {
-  const list = [];
-  const from = kind === "end" ? y0 + PLAN_SLOT_PX : y0;
-  const to = kind === "end" ? y1 : y1 - PLAN_SLOT_PX;
-  for (let y = from; y <= to; y += PLAN_SLOT_PX) if (y >= min) list.push(y);
-  return list;
-}
-
-// Vertical twin of the day chooser: pick one of the hidden hours.
-function openPlanHourChooser(event, options, hint, onPick) {
-  if (event.stopPropagation) event.stopPropagation();
-  if (!options.length) return;
-  closePlanDayChooser();
-  const pop = document.createElement("div");
-  pop.className = "plan-cal plan-hour-cal";
-  pop.id = "planDayChooser";
-  pop.setAttribute("role", "dialog");
-  const head = document.createElement("div");
-  head.className = "plan-cal-head";
-  const title = document.createElement("div");
-  title.className = "plan-cal-title";
-  title.textContent = `${planTimeAt(options[0])} – ${planTimeAt(options[options.length - 1])}`;
-  const close = document.createElement("button");
-  close.type = "button";
-  close.className = "plan-cal-nav";
-  close.textContent = "×";
-  close.title = "Cancel";
-  close.addEventListener("click", closePlanDayChooser);
-  head.append(title, close);
-  const grid = document.createElement("div");
-  grid.className = "plan-cal-grid plan-hour-grid";
-  options.forEach((y) => {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "plan-cal-day is-free";
-    if (y % (2 * PLAN_SLOT_PX)) btn.classList.add("is-half");
-    btn.textContent = planTimeAt(y);
-    btn.dataset.y = String(y);
-    btn.addEventListener("click", () => { closePlanDayChooser(); onPick(y); });
-    grid.append(btn);
-  });
-  const note = document.createElement("div");
-  note.className = "plan-cal-hint";
-  note.textContent = hint;
-  pop.append(head, grid, note);
-  document.body.append(pop);
-  const w = pop.offsetWidth;
-  const h = pop.offsetHeight;
-  pop.style.left = `${Math.max(8, Math.min(event.clientX - w / 2, window.innerWidth - w - 8))}px`;
-  pop.style.top = `${Math.max(8, Math.min(event.clientY + 12, window.innerHeight - h - 8))}px`;
-  pop.querySelector(".is-free")?.focus({ preventScroll: true });
-  const outside = (e) => { if (!pop.contains(e.target)) closePlanDayChooser(); };
-  const onKey = (e) => { if (e.key === "Escape") closePlanDayChooser(); };
-  pop.cleanup = () => {
-    document.removeEventListener("pointerdown", outside, true);
-    document.removeEventListener("keydown", onKey, true);
-  };
-  setTimeout(() => {
-    if (!pop.isConnected) return;
-    document.addEventListener("pointerdown", outside, true);
-    document.addEventListener("keydown", onKey, true);
-  }, 0);
 }
 
 // Picking a day always creates a step on it and opens it; cancelling removes it (and the day).
@@ -5076,19 +4854,6 @@ function planMoveDrag(event, d) {
   let offY = d.isNew ? 30 : d.offY;
   d.target = null;
 
-  // Over a band of hidden hours: on release, pick the start time among them.
-  const vgap = under && under.closest(".plan-vgap");
-  if (vgap) {
-    vgap.classList.add("drop-target");
-    document.querySelectorAll(`.plan-vgap-head[data-y0="${vgap.dataset.y0}"]`).forEach((n) => n.classList.add("drop-target"));
-    const pos = planCanvasPosition(event.clientX, event.clientY, 0, 0);
-    d.target = { type: "vgap", start: pos.start, y0: Number(vgap.dataset.y0), y1: Number(vgap.dataset.y1), clientX: event.clientX, clientY: event.clientY };
-    d.float.style.left = `${event.clientX - offX}px`;
-    d.float.style.top = `${event.clientY - offY}px`;
-    autoScrollPlan(event);
-    return;
-  }
-
   const slot = under && under.closest(".plan-gap, .plan-gap-head, .plan-add-col, .plan-add-head");
   if (slot && slot.dataset.min) {
     slot.classList.add("drop-target");
@@ -5111,18 +4876,16 @@ function planMoveDrag(event, d) {
   if (canvas) {
     const colW = planColW();
     width = Math.max(1, d.card.duration) * colW - 16;
+    height = planCardHeight(d.card);
     offX = Math.min(offX, width - 12);
-    offY = Math.min(offY, (d.isNew ? PLAN_CARD_H : d.h) - 12);
-    const pos = planCanvasPosition(event.clientX, event.clientY, offX, offY);
-    pos.y = planSnapY(pos.y, planCardHeight(d.card));
-    const top = planYToScreen(pos.y);
-    height = planYToScreen(pos.y + planCardHeight(d.card)) - top;
     offY = Math.min(offY, height - 12);
+    const pos = planCanvasPosition(event.clientX, event.clientY, offX, offY);
+    pos.y = planSnapY(pos.y, height);
     d.target = { type: "board", start: pos.start, y: pos.y };
     const ghost = document.createElement("div");
     ghost.className = "plan-ghost";
     ghost.style.left = `${planColX(planDays(), pos.col) + 8}px`;
-    ghost.style.top = `${top}px`;
+    ghost.style.top = `${pos.y}px`;
     ghost.style.width = `${width}px`;
     ghost.style.height = `${height}px`;
     canvas.append(ghost);
@@ -5142,26 +4905,12 @@ function planMoveDrag(event, d) {
 
 function planResizeDrag(event, d) {
   if (d.kind === "resize-b") {
-    // Bottom edge follows the pointer through the visible hours; hidden bands are skipped,
-    // and releasing over one opens a chooser for the end time.
-    const canvas = document.getElementById("planCanvas");
-    const top = planSnapY(d.card.y, planCardHeight({ hours: d.origHours || 1 }));
-    const room = (PLAN_SLOTS * PLAN_SLOT_PX - top) / (2 * PLAN_SLOT_PX);
-    const bottom = planScreenToY(event.clientY - canvas.getBoundingClientRect().top);
-    const hours = Math.round((bottom - top) / PLAN_SLOT_PX) / 2;
-    d.card.hours = Math.min(room, normalizePlanHours(hours) || 0.5);
-    const screenTop = planYToScreen(top);
+    const steps = Math.round((event.clientY - d.y0) / PLAN_SLOT_PX);
+    const base = d.origHours || 1;
+    const room = (PLAN_SLOTS * PLAN_SLOT_PX - planSnapY(d.card.y)) / (2 * PLAN_SLOT_PX);
+    d.card.hours = Math.min(room, normalizePlanHours(base + steps / 2) || 0.5);
     d.el.classList.add("has-work");
-    d.el.style.height = `${planYToScreen(top + planCardHeight(d.card)) - screenTop}px`;
-    clearPlanDropHints();
-    d.target = null;
-    const vgap = document.elementsFromPoint(event.clientX, event.clientY).find((n) => n.matches(".plan-vgap"));
-    if (vgap && Number(vgap.dataset.y0) >= top) {
-      vgap.classList.add("drop-target");
-      document.querySelectorAll(`.plan-vgap-head[data-y0="${vgap.dataset.y0}"]`).forEach((n) => n.classList.add("drop-target"));
-      d.target = { type: "vgap-end", top, y0: Number(vgap.dataset.y0), y1: Number(vgap.dataset.y1), clientX: event.clientX, clientY: event.clientY };
-      d.el.style.height = `${vgap.getBoundingClientRect().bottom - canvas.getBoundingClientRect().top - screenTop}px`;
-    }
+    d.el.style.height = `${planCardHeight(d.card)}px`;
     refreshPostitLabels(d.el, d.card);
     autoScrollPlan(event);
     return;
@@ -5254,29 +5003,6 @@ function finishPlanDrag(d) {
   }
 
   const t = d.target;
-  if (d.kind === "move" && t && t.type === "vgap") {
-    renderPlan();
-    const options = planHourOptions(t.y0, t.y1, "start").filter((y) => y + planCardHeight(d.card) <= PLAN_SLOTS * PLAN_SLOT_PX);
-    openPlanHourChooser({ clientX: t.clientX, clientY: t.clientY }, options.length ? options : [t.y0], "Pick the start time for this step", (y) => {
-      if (d.isNew && !planState.cards.includes(d.card)) planState.cards.push(d.card);
-      d.card.start = t.start;
-      d.card.y = y;
-      persistPlan();
-      renderPlan();
-      if (d.isNew) openCardDialog(d.card, true);
-    });
-    return;
-  }
-  if (d.kind === "resize-b" && t && t.type === "vgap-end") {
-    d.card.hours = d.origHours;
-    renderPlan();
-    openPlanHourChooser({ clientX: t.clientX, clientY: t.clientY }, planHourOptions(t.y0, t.y1, "end", t.top + PLAN_SLOT_PX), "Pick the end time for this step", (y) => {
-      d.card.hours = normalizePlanHours((y - t.top) / (2 * PLAN_SLOT_PX)) || 0.5;
-      persistPlan();
-      renderPlan();
-    });
-    return;
-  }
   if (d.kind === "move" && t && (t.type === "gap" || t.type === "add")) {
     renderPlan();
     openPlanDayChooser({ clientX: t.clientX, clientY: t.clientY }, t.min, t.max, (iso) => placePlanCardOnDay(d, t, iso));
