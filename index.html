@@ -5464,11 +5464,6 @@ function setAppMode(mode) {
 }
 
 document.querySelectorAll(".mode-card").forEach((card) => {
-  // Mind Plan is not shared yet: only shown with ?mindplan in the URL.
-  if (card.dataset.mode === "planificator" && !new URLSearchParams(location.search).has("mindplan")) {
-    card.remove();
-    return;
-  }
   card.addEventListener("click", () => {
     setAppMode(card.dataset.mode);
     modeDialog.close();
